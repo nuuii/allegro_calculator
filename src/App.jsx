@@ -47,7 +47,7 @@ export default function KalkulatorAllegro() {
   const [prodEan, setProdEan] = useState("");
   const [offerPrice, setOfferPrice] = useState("");
   const [purchaseCost, setPurchaseCost] = useState("");
-  const [quantity, setQuantity] = useState("");
+  const [quantity, setQuantity] = useState("1");
   const [allegroDiscounted, setAllegroDiscounted] = useState(false);
 
   const [supplierName, setSupplierName] = useState(() => localStorage.getItem("calcallegro_supplier") || "");
@@ -193,7 +193,7 @@ export default function KalkulatorAllegro() {
       name: prodName.trim() || "Produkt bez nazwy",
       ean: prodEan.trim() || "—",
       supplier: supplierName.trim() || "—",
-      quantity: quantity ? parseInt(quantity, 10) : null,
+      quantity: !isNaN(parseInt(quantity, 10)) ? parseInt(quantity, 10) : 1,
       allegroDiscounted: allegroDiscounted,
       offerPrice: parseFloat(offerPrice.replace(",", ".")),
       purchaseCost: purchaseCost ? parseFloat(purchaseCost.replace(",", ".")) : 0,
@@ -213,7 +213,7 @@ export default function KalkulatorAllegro() {
     setProdEan("");
     setOfferPrice("");
     setPurchaseCost("");
-    setQuantity("");
+    setQuantity("1");
   };
 
   const handleRemoveFromList = (id) => {
@@ -323,7 +323,7 @@ export default function KalkulatorAllegro() {
               label="Dostawca / Hurtownia" 
               value={supplierName} 
               onChange={setSupplierName} 
-              placeholder="Nazwa dostawcy (zostanie zapamiętana)" 
+              placeholder="Nazwa dostawcy lub hurtowni" 
             />
           </div>
 
@@ -331,22 +331,7 @@ export default function KalkulatorAllegro() {
 
           {/* Sekcja Identyfikacji Towaru */}
           <div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", alignItems: "end" }}>
-              <Field label="Nazwa produktu" value={prodName} onChange={setProdName} placeholder="np. Słuchawki X" />
-              <Field label="Kod EAN / SKU" value={prodEan} onChange={setProdEan} placeholder="np. 590123..." />
-            </div>
-
-            <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", marginTop: "0.45rem" }}>
-              <div style={{ fontSize: "0.68rem", color: "#6a6a82", marginRight: "0.5rem" }}>Ilość (szt.)</div>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={quantity}
-                onChange={e => setQuantity(e.target.value)}
-                placeholder="np. 1 (opcjonalne)"
-                style={{ width: "96px", background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#e8e4d9", fontSize: "0.95rem", fontFamily: "inherit", padding: "0.45rem" }}
-              />
-            </div>
+            <Field label="Kod EAN / SKU" value={prodEan} onChange={setProdEan} placeholder="np. 590123..." />
 
             {/* Przycisk wywołujący automatyczne szukanie przez Apify */}
             <button
@@ -355,7 +340,7 @@ export default function KalkulatorAllegro() {
               disabled={eanLoading}
               style={{
                 width: "100%",
-                marginTop: "0.2rem",
+                marginTop: "0.6rem",
                 background: "#1e1e28",
                 border: "1px solid #f5a623",
                 color: "#f5a623",
@@ -371,9 +356,25 @@ export default function KalkulatorAllegro() {
               {eanLoading ? (
                 <span><span className="spin" style={{ marginRight: "0.4rem" }}>⟳</span> Trwa scrapowanie cen przez Apify (szacowany czas: 15-40s)...</span>
               ) : (
-                "🔍 Skonfiguruj produkt: Znajdź najtańszą cenę na Allegro po EAN"
+                "🔍 Sprawdź Allegro po EAN"
               )}
             </button>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 120px", gap: "0.75rem", alignItems: "end", marginTop: "0.75rem" }}>
+              <Field label="Nazwa produktu" value={prodName} onChange={setProdName} placeholder="np. Słuchawki X" />
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                <label style={{ fontSize: "0.68rem", color: "#6a6a82", fontWeight: 500 }}>Ilość (szt.)</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={quantity}
+                  onChange={e => setQuantity(e.target.value)}
+                  placeholder="1"
+                  style={{ width: "100%", background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#e8e4d9", fontSize: "0.95rem", fontFamily: "inherit", padding: "0.45rem" }}
+                />
+              </div>
+            </div>
           </div>
 
           <div style={{ height: "1px", background: "#1e1e26" }} />
