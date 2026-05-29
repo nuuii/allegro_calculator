@@ -462,7 +462,6 @@ export default function KalkulatorAllegro() {
                 >
                   {allegroDiscounted ? "50% RABAT" : "Rabat 50%"}
                 </button>
-                <span style={{ fontSize: "0.72rem", color: "#f5a623", fontWeight: 600, lineHeight: 1.3 }}>Obniża prowizję Allegro o 50%</span>
               </div>
             </div>
 
