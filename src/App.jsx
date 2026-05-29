@@ -145,29 +145,31 @@ export default function KalkulatorAllegro() {
   }, []);
 
   const fetchRatesData = useCallback(() => {
-    setRatesLoading(true);
-    setRatesError(null);
-    fetch("https://api.frankfurter.app/latest?base=PLN&symbols=EUR,USD,GBP,CHF,CZK,RON,CNY")
-      .then(r => {
-        if (!r.ok) throw new Error();
-        return r.json();
-      })
-      .then(data => {
-        const converted = {};
-        for (const [cur, rate] of Object.entries(data.rates)) {
-          converted[cur] = 1 / rate;
-        }
-        converted["PLN"] = 1;
-        setRates(converted);
-        setRatesDate(data.date);
-        setRatesLoading(false);
-      })
-      .catch(() => {
-        setRatesError("Błąd kursów walut");
-        setRates({ PLN: 1, EUR: 4.27, USD: 3.92, GBP: 5.02, CHF: 4.38, CZK: 0.173, RON: 0.86, CNY: 0.541 });
-        setRatesLoading(false);
-      });
-  }, []);
+  setRatesLoading(true);
+  setRatesError(null);
+  
+  // Zapytanie kierujemy do naszego backendu na Vercelu z parametrem action=rates
+  fetch("/api/scrape?action=rates")
+    .then(r => {
+      if (!r.ok) throw new Error();
+      return r.json();
+    })
+    .then(data => {
+      const converted = {};
+      for (const [cur, rate] of Object.entries(data.rates)) {
+        converted[cur] = 1 / rate;
+      }
+      converted["PLN"] = 1;
+      setRates(converted);
+      setRatesDate(data.date);
+      setRatesLoading(false);
+    })
+    .catch(() => {
+      setRatesError("Błąd kursów walut (Tryb Offline)");
+      setRates({ PLN: 1, EUR: 4.27, USD: 3.92, GBP: 5.02, CHF: 4.38, CZK: 0.173, RON: 0.86, CNY: 0.541 });
+      setRatesLoading(false);
+    });
+}, []);
 
   useEffect(() => {
     fetchRatesData();
