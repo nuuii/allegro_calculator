@@ -99,6 +99,36 @@ export default function KalkulatorAllegro() {
   const [ratesError, setRatesError] = useState(null);
   const [ratesDate, setRatesDate] = useState(null);
   const [savedCalculations, setSavedCalculations] = useState([]);
+  
+  // Nowy stan dla ładowania zapytania do Apify
+  const [eanLoading, setEanLoading] = useState(false);
+
+  // Funkcja komunikująca się z Twoim serwerem /api/scrape.js
+  const handleFindCheapestOffer = async () => {
+    if (!prodEan.trim()) {
+      alert("Wpisz kod EAN, aby rozpocząć przeszukiwanie Allegro.");
+      return;
+    }
+
+    setEanLoading(true);
+    try {
+      const response = await fetch(`/api/scrape?ean=${encodeURIComponent(prodEan.trim())}`);
+      const data = await response.json();
+
+      if (data.success) {
+        // Automatyczne przypisanie nazwy produktu z najtańszej oferty
+        setProdName(data.title);
+        // Konwersja kropki z API na przecinek rynkowy dla Twoich filtrów wejściowych
+        setOfferPrice(data.price.replace(".", ","));
+      } else {
+        alert("Błąd wyszukiwania: " + data.error);
+      }
+    } catch (err) {
+      alert("Wystąpił błąd podczas próby połączenia z wewnętrznym skryptem scrapującym.");
+    } finally {
+      setEanLoading(false);
+    }
+  };
 
   useEffect(() => { localStorage.setItem("calcallegro_supplier", supplierName); }, [supplierName]);
   useEffect(() => { localStorage.setItem("calcallegro_currency", purchaseCurrency); }, [purchaseCurrency]);
@@ -274,7 +304,6 @@ export default function KalkulatorAllegro() {
         .cur-btn { border: none; cursor: pointer; transition: all 0.15s; font-family: inherit; }
         select option { background: #16161e; color: #e8e4d9; }
 
-        /* Klasy nowoczesnego Gridu */
         .workspace-grid {
           display: grid;
           grid-template-columns: 1.2fr 1fr;
@@ -329,9 +358,38 @@ export default function KalkulatorAllegro() {
           <div style={{ height: "1px", background: "#1e1e26" }} />
 
           {/* Sekcja Identyfikacji Towaru */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-            <Field label="Nazwa produktu" value={prodName} onChange={setProdName} placeholder="np. Słuchawki X" />
-            <Field label="Kod EAN / SKU" value={prodEan} onChange={setProdEan} placeholder="np. 590123..." />
+          <div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+              <Field label="Nazwa produktu" value={prodName} onChange={setProdName} placeholder="np. Słuchawki X" />
+              <Field label="Kod EAN / SKU" value={prodEan} onChange={setProdEan} placeholder="np. 590123..." />
+            </div>
+            
+            {/* Przycisk wywołujący automatyczne szukanie przez Apify */}
+            <button
+              type="button"
+              onClick={handleFindCheapestOffer}
+              disabled={eanLoading}
+              style={{
+                width: "100%",
+                marginTop: "0.2rem",
+                background: "#1e1e28",
+                border: "1px solid #f5a623",
+                color: "#f5a623",
+                borderRadius: "6px",
+                padding: "0.5rem",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                cursor: eanLoading ? "not-allowed" : "pointer",
+                fontFamily: "inherit",
+                transition: "all 0.2s"
+              }}
+            >
+              {eanLoading ? (
+                <span><span className="spin" style={{ marginRight: "0.4rem" }}>⟳</span> Trwa scrapowanie cen przez Apify (szacowany czas: 15-40s)...</span>
+              ) : (
+                "🔍 Skonfiguruj produkt: Znajdź najtańszą cenę na Allegro po EAN"
+              )}
+            </button>
           </div>
 
           <div style={{ height: "1px", background: "#1e1e26" }} />
@@ -414,7 +472,7 @@ export default function KalkulatorAllegro() {
 
         </div>
 
-        {/* PRAWA KOLUMNA: Karta Wyników (Generowana dynamicznie) */}
+        {/* PRAWA KOLUMNA: Karta Wyników */}
         <div style={{ 
           background: "#121218", 
           borderRadius: "12px", 
@@ -447,13 +505,13 @@ export default function KalkulatorAllegro() {
               {result.profit !== undefined && (
                 <div style={{ background: isPositive ? "#0f2214" : isNegative ? "#220f0f" : "#161622", borderRadius: "8px", padding: "0.75rem 1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <span style={{ fontSize: "0.6rem", color: "#6a6a82", display: "block" }}>CZYSTY ZYSK</span>
+                    <span style={{ fontSize: "0.65rem", color: "#6a6a82", display: "block" }}>CZYSTY ZYSK</span>
                     <span style={{ fontSize: "1.4rem", fontWeight: 800, color: isPositive ? "#4ecb71" : isNegative ? "#e05555" : "#e8e4d9" }}>
                       {isPositive ? "+" : ""}{formatPLN(result.profit)}
                     </span>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <span style={{ fontSize: "0.6rem", color: "#6a6a82", display: "block" }}>MARŻA ZWROTU</span>
+                    <span style={{ fontSize: "0.65rem", color: "#6a6a82", display: "block" }}>MARŻA ZWROTU</span>
                     <span style={{ fontSize: "1.2rem", fontWeight: 700, color: isPositive ? "#4ecb71" : isNegative ? "#e05555" : "#e8e4d9" }}>
                       {formatPct(result.margin)}
                     </span>
@@ -473,7 +531,7 @@ export default function KalkulatorAllegro() {
 
       </div>
 
-      {/* DOLNA SEKCJA: Pełnowymiarowa Tabela Zapisanych Kalkulacji */}
+      {/* DOLNA SEKCJA: Tabela Zapisanych Kalkulacji */}
       <div style={{ background: "#121218", borderRadius: "12px", padding: "1.25rem", border: "1px solid #1e1e26", width: "100%", maxWidth: "1140px", marginTop: "1.5rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
           <div style={{ fontSize: "0.68rem", letterSpacing: "0.08em", color: "#6a6a82", fontWeight: 500 }}>
@@ -530,8 +588,6 @@ export default function KalkulatorAllegro() {
                       <button 
                         onClick={() => handleRemoveFromList(item.id)}
                         style={{ background: "transparent", border: "none", color: "#4a4a5e", cursor: "pointer", fontSize: "0.85rem" }}
-                        onMouseEnter={e => e.target.style.color = "#e05555"}
-                        onMouseLeave={e => e.target.style.color = "#4a4a5e"}
                       >
                         ✕
                       </button>
