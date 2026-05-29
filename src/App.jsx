@@ -331,7 +331,7 @@ export default function KalkulatorAllegro() {
 
           {/* Sekcja Identyfikacji Towaru */}
           <div>
-            <Field label="Kod EAN / SKU" value={prodEan} onChange={setProdEan} placeholder="np. 590123..." />
+            <Field label="Kod EAN" value={prodEan} onChange={setProdEan} placeholder="np. 590123..." />
 
             {/* Przycisk wywołujący automatyczne szukanie przez Apify */}
             <button
@@ -360,7 +360,7 @@ export default function KalkulatorAllegro() {
               )}
             </button>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 120px", gap: "0.75rem", alignItems: "end", marginTop: "0.75rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 120px", gap: "0.75rem", alignItems: "start", marginTop: "0.75rem" }}>
               <Field label="Nazwa produktu" value={prodName} onChange={setProdName} placeholder="np. Słuchawki X" />
               <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
                 <label style={{ fontSize: "0.68rem", color: "#6a6a82", fontWeight: 500 }}>Ilość (szt.)</label>
@@ -371,7 +371,7 @@ export default function KalkulatorAllegro() {
                   value={quantity}
                   onChange={e => setQuantity(e.target.value)}
                   placeholder="1"
-                  style={{ width: "100%", background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#e8e4d9", fontSize: "0.95rem", fontFamily: "inherit", padding: "0.45rem" }}
+                  style={{ width: "100%", background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#e8e4d9", fontSize: "0.95rem", fontFamily: "inherit", padding: "0.5rem", height: "42px" }}
                 />
               </div>
             </div>
@@ -430,19 +430,22 @@ export default function KalkulatorAllegro() {
           <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: "0.75rem", alignItems: "end" }}>
             <div>
               <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.3rem" }}>PROWIZJA %</label>
-              <div style={{ display: "flex", gap: "0.3rem" }}>
-                <input type="text" value={allegro} onChange={e => setAllegro(e.target.value)} style={{ width: "50px", background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#f5a623", fontSize: "0.95rem", padding: "0.5rem", textAlign: "center", fontFamily: "inherit" }} />
-                <button
-                  onClick={() => setAllegroDiscounted(v => !v)}
-                  style={{ marginLeft: "0.25rem", background: allegroDiscounted ? "linear-gradient(135deg, #4ecb71, #2a9d47)" : "#22222e", color: allegroDiscounted ? "#0d0d11" : "#8a8a9e", border: "none", borderRadius: "4px", fontSize: "0.65rem", padding: "0.25rem 0.5rem", cursor: "pointer", display: "flex", alignItems: "center" }}
-                >
-                  {allegroDiscounted ? "50% RABAT" : "Rabat 50%"}
-                </button>
-                <div style={{ display: "flex", gap: "0.15rem" }}>
+              <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                  <input type="text" value={allegro} onChange={e => setAllegro(e.target.value)} style={{ width: "50px", background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#f5a623", fontSize: "0.95rem", padding: "0.5rem", textAlign: "center", fontFamily: "inherit" }} />
+                  <span style={{ color: "#f5a623", fontWeight: 700 }}>%</span>
+                </div>
+                <div style={{ display: "flex", gap: "0.15rem", flexWrap: "wrap" }}>
                   {[5, 10, 15].map(v => (
                     <button key={v} onClick={() => setAllegro(String(v))} style={{ background: "#22222e", color: "#8a8a9e", border: "none", borderRadius: "4px", fontSize: "0.65rem", padding: "0.2rem 0.35rem", cursor: "pointer" }}>{v}%</button>
                   ))}
                 </div>
+                <button
+                  onClick={() => setAllegroDiscounted(v => !v)}
+                  style={{ marginLeft: "auto", background: allegroDiscounted ? "linear-gradient(135deg, #4ecb71, #2a9d47)" : "#22222e", color: allegroDiscounted ? "#0d0d11" : "#8a8a9e", border: "none", borderRadius: "4px", fontSize: "0.65rem", padding: "0.25rem 0.5rem", cursor: "pointer", display: "flex", alignItems: "center" }}
+                >
+                  {allegroDiscounted ? "50% RABAT" : "Rabat 50%"}
+                </button>
               </div>
             </div>
 
