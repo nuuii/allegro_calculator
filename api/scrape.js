@@ -1,12 +1,12 @@
-const axios = require('axios');
+import axios from 'axios';
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // Gwarantowane nagłówki CORS dla Twojego frontendu w React
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // Obsługa tzw. żądania wstępnego (Preflight)
+  // Obsługa żądania wstępnego (Preflight)
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -19,7 +19,7 @@ module.exports = async function handler(req, res) {
   if (action === 'rates') {
     try {
       const response = await axios.get('https://api.frankfurter.app/latest?base=PLN&symbols=EUR,USD,GBP,CHF,CZK,RON,CNY', {
-        timeout: 6000 // 6 sekund na pobranie z zewnętrznego API
+        timeout: 8000 // 8 sekund na pobranie
       });
       return res.status(200).json(response.data);
     } catch (error) {
@@ -66,7 +66,6 @@ module.exports = async function handler(req, res) {
 
       // Filtrujemy i mapujemy wyniki, szukając poprawnych kluczy cenowych
       const validItems = items.map(item => {
-        // Sprawdzamy najpopularniejsze klucze, w jakich scrapery listingów zwracają cenę
         let rawPrice = item.price || item.currentPrice || item.pricePln || item.priceWithShipping;
         if (rawPrice) {
           if (typeof rawPrice === 'string') {
@@ -88,7 +87,7 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      // Sortujemy zebrane oferty od najtańszej do najdroższej
+      // Sortujemy zebrane profesjonalnie oferty od najtańszej do najdroższej
       validItems.sort((a, b) => a.price - b.price);
 
       // Pobieramy najtańszą ofertę (pierwszą z góry)
@@ -111,4 +110,4 @@ module.exports = async function handler(req, res) {
 
   // Fallback w razie wywołania bez parametrów
   return res.status(400).json({ error: 'Niepoprawne żądanie systemu proxy. Wybierz akcję lub podaj kod EAN.' });
-};
+}
