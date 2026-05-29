@@ -80,16 +80,21 @@ function ResultRow({ label, value, negative, accent, dimmed }) {
 }
 
 export default function KalkulatorAllegro() {
-  // Dane identyfikacyjne produktu
+  // Dane produktu (resetowane po dodaniu do listy)
   const [prodName, setProdName] = useState("");
   const [prodEan, setProdEan] = useState("");
-  
-  // Dane finansowe
   const [offerPrice, setOfferPrice] = useState("");
   const [purchaseCost, setPurchaseCost] = useState("");
-  const [purchaseCurrency, setPurchaseCurrency] = useState("PLN");
-  const [allegro, setAllegro] = useState("10");
-  const [vat, setVat] = useState(23);
+
+  // Dane zapamiętywane w localStorage (pamięć podręczna)
+  const [supplierName, setSupplierName] = useState(() => localStorage.getItem("calcallegro_supplier") || "");
+  const [purchaseCurrency, setPurchaseCurrency] = useState(() => localStorage.getItem("calcallegro_currency") || "PLN");
+  const [allegro, setAllegro] = useState(() => localStorage.getItem("calcallegro_allegro") || "10");
+  const [vat, setVat] = useState(() => {
+    const savedVat = localStorage.getItem("calcallegro_vat");
+    return savedVat ? parseInt(savedVat, 10) : 23;
+  });
+
   const [includeDelivery, setIncludeDelivery] = useState(true);
 
   // Kursy walut
@@ -101,7 +106,13 @@ export default function KalkulatorAllegro() {
   // Lista zapisanych kalkulacji
   const [savedCalculations, setSavedCalculations] = useState([]);
 
-  // Dynamiczne ładowanie skryptu SheetJS (XLSX) do eksportu
+  // Efekty zapisujące stany do localStorage przy każdej zmianie
+  useEffect(() => { localStorage.setItem("calcallegro_supplier", supplierName); }, [supplierName]);
+  useEffect(() => { localStorage.setItem("calcallegro_currency", purchaseCurrency); }, [purchaseCurrency]);
+  useEffect(() => { localStorage.setItem("calcallegro_allegro", allegro); }, [allegro]);
+  useEffect(() => { localStorage.setItem("calcallegro_vat", vat.toString()); }, [vat]);
+
+  // Dynamiczne ładowanie skryptu SheetJS (XLSX)
   useEffect(() => {
     if (!window.XLSX) {
       const script = document.createElement("script");
@@ -185,7 +196,6 @@ export default function KalkulatorAllegro() {
   const isNegative = result && result.profit < 0;
   const currentRate = rates[purchaseCurrency];
 
-  // Funkcja dodawania pozycji do wewnętrznej listy
   const handleAddToList = () => {
     if (!offerPrice) {
       alert("Wpisz przynajmniej cenę oferty, aby dodać pozycję.");
@@ -196,6 +206,7 @@ export default function KalkulatorAllegro() {
       id: Date.now(),
       name: prodName.trim() || "Produkt bez nazwy",
       ean: prodEan.trim() || "—",
+      supplier: supplierName.trim() || "—",
       offerPrice: parseFloat(offerPrice.replace(",", ".")),
       purchaseCost: purchaseCost ? parseFloat(purchaseCost.replace(",", ".")) : 0,
       currency: purchaseCurrency,
@@ -211,19 +222,17 @@ export default function KalkulatorAllegro() {
 
     setSavedCalculations(prev => [newItem, ...prev]);
     
-    // Resetowanie pól formularza produktu dla wygody
+    // Resetujemy tylko pola konkretnego produktu, dostawca zostaje nienaruszony!
     setProdName("");
     setProdEan("");
     setOfferPrice("");
     setPurchaseCost("");
   };
 
-  // Usunięcie pojedynczej pozycji z listy
   const handleRemoveFromList = (id) => {
     setSavedCalculations(prev => prev.filter(item => item.id !== id));
   };
 
-  // Eksport zgromadzonych danych do arkusza XLSX przy użyciu SheetJS
   const handleExportToExcel = () => {
     if (savedCalculations.length === 0) {
       alert("Lista kalkulacji jest pusta!");
@@ -235,11 +244,11 @@ export default function KalkulatorAllegro() {
       return;
     }
 
-    // Mapowanie wewnętrznej struktury na czytelne nagłówki i zaokrąglone wartości do Excela
     const dataForExcel = savedCalculations.map((item, index) => ({
       "Lp.": index + 1,
       "Nazwa produktu": item.name,
       "EAN / SKU": item.ean,
+      "Dostawca": item.supplier,
       "Cena oferty (Brutto PLN)": item.offerPrice,
       "Stawka VAT (%)": item.vat,
       "Koszt zakupu (Waluta)": item.purchaseCost,
@@ -257,7 +266,6 @@ export default function KalkulatorAllegro() {
     const workbook = window.XLSX.utils.book_new();
     window.XLSX.utils.book_append_sheet(workbook, worksheet, "Kalkulacje Allegro");
     
-    // Wygenerowanie pobierania pliku
     window.XLSX.writeFile(workbook, `Kalkulacja_Allegro_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
@@ -299,7 +307,6 @@ export default function KalkulatorAllegro() {
         .cur-btn:hover { transform: translateY(-1px); }
         select option { background: #1e1e28; color: #e8e4d9; }
 
-        /* Style tabeli historii */
         .calc-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left; margin-top: 1rem; }
         .calc-table th { background: #1e1e28; color: #8a8a9e; padding: 0.6rem; font-weight: 500; border-bottom: 1px solid #2a2a36; }
         .calc-table td { padding: 0.6rem; border-bottom: 1px solid #1e1e28; color: #e8e4d9; }
@@ -327,16 +334,29 @@ export default function KalkulatorAllegro() {
           color: "#e8e4d9",
         }}>MARŻY ALLEGRO</div>
         <div style={{ color: "#5a5a6e", fontSize: "0.78rem", marginTop: "0.5rem", letterSpacing: "0.1em" }}>
-          PROWIZJE · VAT · WYSYŁKA · HISTORIA OPERACJI · EKSPORT XLSX
+          PROWIZJE · VAT · KONTRAHENCI · AUTOSAVE · EKSPORT XLSX
         </div>
       </div>
 
       <div style={{ width: "100%", maxWidth: "680px", display: "flex", flexDirection: "column", gap: "1rem" }}>
 
+        {/* Sekcja kontrahenta i logistyki */}
+        <div style={{ background: "#16161e", borderRadius: "16px", padding: "1.5rem", border: "1px solid #2a2a36" }}>
+          <div style={{ fontSize: "0.7rem", letterSpacing: "0.12em", color: "#5a5a6e", marginBottom: "1.2rem" }}>
+            PODMIOTY I DANE STAŁE (ZAPAMIĘTYWANE W PRZEGLĄDARCE)
+          </div>
+          <Field 
+            label="Nazwa dostawcy / hurtowni" 
+            value={supplierName} 
+            onChange={setSupplierName} 
+            placeholder="np. Centrala Gadżetów Sp. z o.o. (zostanie zapamiętane)" 
+          />
+        </div>
+
         {/* Dane Identyfikacyjne Produktu */}
         <div style={{ background: "#16161e", borderRadius: "16px", padding: "1.5rem", border: "1px solid #2a2a36" }}>
           <div style={{ fontSize: "0.7rem", letterSpacing: "0.12em", color: "#5a5a6e", marginBottom: "1.2rem" }}>
-            IDENTYFIKACJA PRODUKTU (OPCJONALNIE DO LISTY)
+            BIEŻĄCY PRODUKT
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
             <Field label="Nazwa produktu" value={prodName} onChange={setProdName} placeholder="np. Słuchawki Bezprzewodowe X" />
@@ -565,7 +585,7 @@ export default function KalkulatorAllegro() {
           </div>
         </div>
 
-        {/* Wyniki i przycisk zapisu */}
+        {/* Wyniki */}
         {result && (
           <div className="fadeup" style={{
             background: "#16161e",
@@ -642,7 +662,6 @@ export default function KalkulatorAllegro() {
               </div>
             )}
 
-            {/* Przycisk wrzucenia na listę */}
             <button
               onClick={handleAddToList}
               style={{
@@ -658,15 +677,13 @@ export default function KalkulatorAllegro() {
                 cursor: "pointer",
                 transition: "transform 0.15s"
               }}
-              onMouseEnter={e => e.target.style.transform = "scale(1.01)"}
-              onMouseLeave={e => e.target.style.transform = "none"}
             >
               ＋ DODAJ TĘ KALKULACJĘ DO LISTY
             </button>
           </div>
         )}
 
-        {/* Sekcja Listy / Historii i pobierania XLSX */}
+        {/* Tabela historii i eksport */}
         <div style={{ background: "#16161e", borderRadius: "16px", padding: "1.5rem", border: "1px solid #2a2a36", marginTop: "0.5rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
             <div style={{ fontSize: "0.7rem", letterSpacing: "0.12em", color: "#5a5a6e" }}>
@@ -703,8 +720,8 @@ export default function KalkulatorAllegro() {
                   <tr>
                     <th>Produkt</th>
                     <th>EAN</th>
+                    <th>Dostawca</th>
                     <th>Oferta</th>
-                    <th>Zakup</th>
                     <th>Zysk</th>
                     <th>Marża</th>
                     <th></th>
@@ -715,13 +732,8 @@ export default function KalkulatorAllegro() {
                     <tr key={item.id}>
                       <td style={{ fontWeight: 500 }}>{item.name}</td>
                       <td style={{ color: "#6a6a7e" }}>{item.ean}</td>
+                      <td style={{ color: "#a5a5b5" }}>{item.supplier}</td>
                       <td>{formatPLN(item.offerPrice)}</td>
-                      <td>
-                        {item.currency !== "PLN" 
-                          ? `${item.purchaseCost} ${item.currency}`
-                          : formatPLN(item.purchaseCost)
-                        }
-                      </td>
                       <td style={{ color: item.profit > 0 ? "#4ecb71" : "#e05555" }}>
                         {formatPLN(item.profit)}
                       </td>
@@ -732,7 +744,6 @@ export default function KalkulatorAllegro() {
                         <button 
                           onClick={() => handleRemoveFromList(item.id)}
                           style={{ background: "transparent", border: "none", color: "#5a5a6e", cursor: "pointer", fontSize: "0.9rem" }}
-                          title="Usuń"
                         >
                           ✕
                         </button>
@@ -746,7 +757,7 @@ export default function KalkulatorAllegro() {
         </div>
 
         <div style={{ textAlign: "center", fontSize: "0.65rem", color: "#2a2a3a", letterSpacing: "0.05em", paddingBottom: "1rem" }}>
-          Kursy walut: frankfurter.app (ECB) · Moduł eksportu: SheetJS Integration
+          Pamięć podręczna: localStorage aktywny · Eksport tabeli uwzględnia kolumnę dostawcy
         </div>
       </div>
     </div>
