@@ -427,43 +427,70 @@ export default function KalkulatorAllegro() {
           </div>
 
           {/* Prowizje, VAT i Logistyka obok siebie */}
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: "0.75rem", alignItems: "end" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1.3fr 0.95fr 0.85fr", gap: "0.75rem", alignItems: "start" }}>
             <div>
               <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.3rem" }}>PROWIZJA %</label>
-              <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap", alignItems: "center" }}>
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-                  <input type="text" value={allegro} onChange={e => setAllegro(e.target.value)} style={{ width: "50px", background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#f5a623", fontSize: "0.95rem", padding: "0.5rem", textAlign: "center", fontFamily: "inherit" }} />
+                  <input
+                    type="text"
+                    value={allegro}
+                    onChange={e => setAllegro(e.target.value)}
+                    style={{ width: "56px", background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#f5a623", fontSize: "0.95rem", padding: "0.5rem", textAlign: "center", fontFamily: "inherit" }}
+                  />
                   <span style={{ color: "#f5a623", fontWeight: 700 }}>%</span>
                 </div>
-                <div style={{ display: "flex", gap: "0.15rem", flexWrap: "wrap" }}>
+
+                <div style={{ display: "flex", gap: "0.2rem", flexWrap: "wrap" }}>
                   {[5, 10, 15].map(v => (
-                    <button key={v} onClick={() => setAllegro(String(v))} style={{ background: "#22222e", color: "#8a8a9e", border: "none", borderRadius: "4px", fontSize: "0.65rem", padding: "0.2rem 0.35rem", cursor: "pointer" }}>{v}%</button>
+                    <button
+                      key={v}
+                      onClick={() => setAllegro(String(v))}
+                      style={{ background: "#22222e", color: "#8a8a9e", border: "none", borderRadius: "5px", fontSize: "0.72rem", padding: "0.45rem 0.6rem", cursor: "pointer" }}
+                    >
+                      {v}%
+                    </button>
                   ))}
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", marginLeft: "auto" }}>
-                  <button
-                    onClick={() => setAllegroDiscounted(v => !v)}
-                    style={{ background: allegroDiscounted ? "linear-gradient(135deg, #4ecb71, #2a9d47)" : "#22222e", color: allegroDiscounted ? "#0d0d11" : "#8a8a9e", border: "none", borderRadius: "4px", fontSize: "0.65rem", padding: "0.25rem 0.5rem", cursor: "pointer", display: "flex", alignItems: "center" }}
-                  >
-                    {allegroDiscounted ? "50% RABAT" : "Rabat 50%"}
-                  </button>
-                  <span style={{ marginTop: "0.25rem", fontSize: "0.65rem", color: "#f5a623", fontWeight: 600 }}>Obniża prowizję Allegro o 50%</span>
-                </div>
+              </div>
+
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center", marginTop: "0.75rem" }}>
+                <button
+                  type="button"
+                  onClick={() => setAllegroDiscounted(v => !v)}
+                  style={{ background: allegroDiscounted ? "linear-gradient(135deg, #4ecb71, #2a9d47)" : "#22222e", color: allegroDiscounted ? "#0d0d11" : "#8a8a9e", border: "none", borderRadius: "6px", fontSize: "0.75rem", padding: "0.55rem 0.85rem", cursor: "pointer", minWidth: "148px" }}
+                >
+                  {allegroDiscounted ? "50% RABAT" : "Rabat 50%"}
+                </button>
+                <span style={{ fontSize: "0.72rem", color: "#f5a623", fontWeight: 600, lineHeight: 1.3 }}>Obniża prowizję Allegro o 50%</span>
               </div>
             </div>
 
             <div>
               <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.3rem" }}>VAT</label>
-              <div style={{ display: "flex", gap: "0.2rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: "0.35rem" }}>
                 {VAT_OPTIONS.map(v => (
-                  <button key={v} onClick={() => setVat(v)} style={{ flex: 1, background: vat === v ? "linear-gradient(135deg, #f5a623, #f0623a)" : "#22222e", color: vat === v ? "#0d0d11" : "#8a8a9e", border: "none", borderRadius: "5px", padding: "0.5rem 0", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{v}%</button>
+                  <button
+                    key={v}
+                    onClick={() => setVat(v)}
+                    style={{ background: vat === v ? "linear-gradient(135deg, #f5a623, #f0623a)" : "#22222e", color: vat === v ? "#0d0d11" : "#8a8a9e", border: "none", borderRadius: "5px", padding: "0.55rem 0", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}
+                  >
+                    {v}%
+                  </button>
                 ))}
               </div>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "#161622", padding: "0.4rem 0.5rem", borderRadius: "6px", justifyContent: "center", height: "36px", cursor: "pointer" }} onClick={() => setIncludeDelivery(v => !v)}>
-              <span style={{ fontSize: "0.6rem", color: "#6a6a82", lineHeight: 1 }}>DOSTAWA 2%</span>
-              <span style={{ fontSize: "0.8rem", color: includeDelivery ? "#4ecb71" : "#e05555", fontWeight: 700, marginTop: "0.1rem" }}>{includeDelivery ? "TAK" : "NIE"}</span>
+            <div>
+              <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.3rem" }}>DOSTAWA</label>
+              <button
+                type="button"
+                onClick={() => setIncludeDelivery(v => !v)}
+                style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#161622", padding: "0.75rem 0.65rem", borderRadius: "8px", border: "1px solid #2d2d3d", cursor: "pointer" }}
+              >
+                <span style={{ fontSize: "0.72rem", color: "#6a6a82", lineHeight: 1 }}>DOSTAWA 2%</span>
+                <span style={{ fontSize: "0.9rem", color: includeDelivery ? "#4ecb71" : "#e05555", fontWeight: 700, marginTop: "0.25rem" }}>{includeDelivery ? "TAK" : "NIE"}</span>
+              </button>
             </div>
           </div>
 
