@@ -440,12 +440,15 @@ export default function KalkulatorAllegro() {
                     <button key={v} onClick={() => setAllegro(String(v))} style={{ background: "#22222e", color: "#8a8a9e", border: "none", borderRadius: "4px", fontSize: "0.65rem", padding: "0.2rem 0.35rem", cursor: "pointer" }}>{v}%</button>
                   ))}
                 </div>
-                <button
-                  onClick={() => setAllegroDiscounted(v => !v)}
-                  style={{ marginLeft: "auto", background: allegroDiscounted ? "linear-gradient(135deg, #4ecb71, #2a9d47)" : "#22222e", color: allegroDiscounted ? "#0d0d11" : "#8a8a9e", border: "none", borderRadius: "4px", fontSize: "0.65rem", padding: "0.25rem 0.5rem", cursor: "pointer", display: "flex", alignItems: "center" }}
-                >
-                  {allegroDiscounted ? "50% RABAT" : "Rabat 50%"}
-                </button>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", marginLeft: "auto" }}>
+                  <button
+                    onClick={() => setAllegroDiscounted(v => !v)}
+                    style={{ background: allegroDiscounted ? "linear-gradient(135deg, #4ecb71, #2a9d47)" : "#22222e", color: allegroDiscounted ? "#0d0d11" : "#8a8a9e", border: "none", borderRadius: "4px", fontSize: "0.65rem", padding: "0.25rem 0.5rem", cursor: "pointer", display: "flex", alignItems: "center" }}
+                  >
+                    {allegroDiscounted ? "50% RABAT" : "Rabat 50%"}
+                  </button>
+                  <span style={{ marginTop: "0.25rem", fontSize: "0.65rem", color: "#f5a623", fontWeight: 600 }}>Obniża prowizję Allegro o 50%</span>
+                </div>
               </div>
             </div>
 
