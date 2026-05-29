@@ -1,8 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
 
-// ==========================================
-// 1. STAŁE GLOBALNE I FUNKCJE POMOCNICZE
-// ==========================================
 const SHIPPING_TIERS = [
   { max: 29.99, cost: 0 },
   { max: 44.99, cost: 1.59 },
@@ -42,66 +39,10 @@ function formatPct(val) {
   return (val * 100).toFixed(2).replace(".", ",") + " %";
 }
 
-// ==========================================
-// 2. ELEMENTY INTERFEJSU (ATOMS / MOLECULES)
-// ==========================================
-function Toolbar({ ratesLoading, ratesError, ratesDate, count, onRefresh, onExport }) {
-  return (
-    <div style={{
-      width: "100%",
-      maxWidth: "1140px",
-      background: "#121218",
-      border: "1px solid #1e1e26",
-      borderRadius: "8px",
-      padding: "0.6rem 1.2rem",
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: "1.5rem",
-      flexWrap: "wrap",
-      gap: "0.8rem"
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontSize: "0.72rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-          <span style={{ 
-            width: "8px", height: "8px", borderRadius: "50%", 
-            background: ratesLoading ? "#f5a623" : ratesError ? "#e05555" : "#4ecb71" 
-          }} />
-          <span style={{ color: "#6a6a82", fontWeight: 500 }}>NBP/ECB API:</span>
-          <span style={{ color: "#e8e4d9" }}>
-            {ratesLoading ? "Synchronizacja..." : ratesError ? "Tryb Offline" : `Połączono (${ratesDate || 'Aktualne'})`}
-          </span>
-        </div>
-        <button 
-          onClick={onRefresh} 
-          disabled={ratesLoading}
-          style={{ background: "#1e1e28", border: "1px solid #2d2d3d", color: "#8a8a9e", padding: "0.2rem 0.5rem", borderRadius: "4px", cursor: "pointer", fontSize: "0.65rem" }}
-        >
-          {ratesLoading ? "..." : "⟳ Odśwież"}
-        </button>
-      </div>
-
-      <div style={{ display: "flex", alignItems: "center", gap: "1.2rem" }}>
-        <div style={{ fontSize: "0.72rem", color: "#6a6a82" }}>
-          REJESTR sesji: <strong style={{ color: "#f5a623" }}>{count} szt.</strong>
-        </div>
-        {count > 0 && (
-          <button
-            onClick={onExport}
-            style={{ background: "#f5a623", color: "#0d0d11", border: "none", borderRadius: "4px", padding: "0.35rem 0.8rem", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
-          >
-            📥 Eksportuj XLSX
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function Field({ label, value, onChange, placeholder, note }) {
   return (
-    <div style={{ marginBottom: "0.8rem" }}>
-      <label style={{ fontSize: "0.68rem", letterSpacing: "0.08em", color: "#6a6a82", display: "block", marginBottom: "0.3rem", fontWeight: 500 }}>
+    <div style={{ marginBottom: "1rem" }}>
+      <label style={{ fontSize: "0.7rem", letterSpacing: "0.1em", color: "#5a5a6e", display: "block", marginBottom: "0.4rem" }}>
         {label.toUpperCase()}
       </label>
       <input
@@ -112,15 +53,15 @@ function Field({ label, value, onChange, placeholder, note }) {
         style={{
           width: "100%",
           background: "#1e1e28",
-          border: "1px solid #2d2d3d",
-          borderRadius: "6px",
+          border: "1px solid #3a3a48",
+          borderRadius: "8px",
           color: "#e8e4d9",
-          fontSize: "0.95rem",
+          fontSize: "1.05rem",
           fontFamily: "inherit",
-          padding: "0.5rem 0.75rem",
+          padding: "0.6rem 0.9rem",
         }}
       />
-      {note && <div style={{ fontSize: "0.65rem", color: "#3a3a4e", marginTop: "0.2rem" }}>{note}</div>}
+      {note && <div style={{ fontSize: "0.65rem", color: "#3a3a4e", marginTop: "0.25rem" }}>{note}</div>}
     </div>
   );
 }
@@ -128,220 +69,24 @@ function Field({ label, value, onChange, placeholder, note }) {
 function ResultRow({ label, value, negative, accent, dimmed }) {
   return (
     <div className="row-result">
-      <span style={{ fontSize: "0.75rem", color: dimmed ? "#5a5a6e" : "#8a8a9e" }}>{label}</span>
+      <span style={{ fontSize: "0.78rem", color: dimmed ? "#5a5a6e" : "#8a8a9e" }}>{label}</span>
       <span style={{
         fontSize: "0.85rem",
-        fontWeight: accent ? 600 : 400,
-        color: negative ? "#e05555" : accent ? "#f5a623" : dimmed ? "#5a5a6e" : "#e8e4d9",
+        fontWeight: accent ? 500 : 400,
+        color: negative ? "#c04040" : accent ? "#f5a623" : dimmed ? "#5a5a6e" : "#e8e4d9",
       }}>{value}</span>
     </div>
   );
 }
 
-// ==========================================
-// 3. SEKCJA FORMULARZA WEJŚCIOWEGO
-// ==========================================
-function CalculatorInputs({ 
-  supplierName, setSupplierName, prodName, setProdName, prodEan, setProdEan, 
-  offerPrice, setOfferPrice, purchaseCost, setPurchaseCost, purchaseCurrency, setPurchaseCurrency,
-  allegro, setAllegro, vat, setVat, includeDelivery, setIncludeDelivery, currentRate, ratesLoading
-}) {
-  return (
-    <div style={{ background: "#121218", borderRadius: "12px", padding: "1.25rem", border: "1px solid #1e1e26", display: "flex", flexDirection: "column", gap: "1rem" }}>
-      <div>
-        <Field label="Dostawca / Hurtownia" value={supplierName} onChange={setSupplierName} placeholder="Nazwa dostawcy (zostanie zapamiętana)" />
-      </div>
-      <div style={{ height: "1px", background: "#1e1e26" }} />
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-        <Field label="Nazwa produktu" value={prodName} onChange={setProdName} placeholder="np. Słuchawki X" />
-        <Field label="Kod EAN / SKU" value={prodEan} onChange={setProdEan} placeholder="np. 590123..." />
-      </div>
-      <div style={{ height: "1px", background: "#1e1e26" }} />
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-        <Field label="Cena oferty brutto" value={offerPrice} onChange={setOfferPrice} placeholder="np. 89,99" />
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <label style={{ fontSize: "0.68rem", color: "#6a6a82", marginBottom: "0.3rem", fontWeight: 500 }}>KOSZT ZAKUPU</label>
-          <div style={{ display: "flex", gap: "0.4rem" }}>
-            <input type="text" inputMode="decimal" value={purchaseCost} onChange={e => setPurchaseCost(e.target.value)} placeholder="Cena" style={{ flex: 1, background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#e8e4d9", fontSize: "0.95rem", fontFamily: "inherit", padding: "0.5rem" }} />
-            <select value={purchaseCurrency} onChange={e => setPurchaseCurrency(e.target.value)} style={{ background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#f5a623", fontSize: "0.85rem", fontFamily: "inherit", padding: "0.5rem", cursor: "pointer" }}>
-              {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
-            </select>
-          </div>
-        </div>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem", background: "#161622", padding: "0.5rem", borderRadius: "6px" }}>
-        <div style={{ display: "flex", gap: "0.25rem" }}>
-          {CURRENCIES.map(c => (
-            <button key={c.code} className="cur-btn" onClick={() => setPurchaseCurrency(c.code)} style={{ background: purchaseCurrency === c.code ? "#f5a623" : "#22222e", color: purchaseCurrency === c.code ? "#0d0d11" : "#8a8a9e", borderRadius: "4px", padding: "0.15rem 0.4rem", fontSize: "0.68rem", fontWeight: 500 }}>{c.code}</button>
-          ))}
-        </div>
-        <div style={{ fontSize: "0.68rem" }}>
-          {ratesLoading ? <span style={{ color: "#6a6a82" }}><span className="spin">⟳</span> API...</span> : currentRate && purchaseCurrency !== "PLN" ? (
-            <span style={{ color: "#4ecb71" }}>1 {purchaseCurrency} = {currentRate.toFixed(4)} zł</span>
-          ) : <span style={{ color: "#4a4a5e" }}>Baza: PLN</span>}
-        </div>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: "0.75rem", alignItems: "end" }}>
-        <div>
-          <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.3rem" }}>PROWIZJA %</label>
-          <div style={{ display: "flex", gap: "0.3rem" }}>
-            <input type="text" value={allegro} onChange={e => setAllegro(e.target.value)} style={{ width: "50px", background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#f5a623", fontSize: "0.95rem", padding: "0.5rem", textAlign: "center", fontFamily: "inherit" }} />
-            <div style={{ display: "flex", gap: "0.15rem" }}>
-              {[5, 10, 15].map(v => <button key={v} onClick={() => setAllegro(String(v))} style={{ background: "#22222e", color: "#8a8a9e", border: "none", borderRadius: "4px", fontSize: "0.65rem", padding: "0.2rem 0.35rem", cursor: "pointer" }}>{v}%</button>)}
-            </div>
-          </div>
-        </div>
-        <div>
-          <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.3rem" }}>VAT</label>
-          <div style={{ display: "flex", gap: "0.2rem" }}>
-            {VAT_OPTIONS.map(v => <button key={v} onClick={() => setVat(v)} style={{ flex: 1, background: vat === v ? "linear-gradient(135deg, #f5a623, #f0623a)" : "#22222e", color: vat === v ? "#0d0d11" : "#8a8a9e", border: "none", borderRadius: "5px", padding: "0.5rem 0", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{v}%</button>)}
-          </div>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "#161622", padding: "0.4rem 0.5rem", borderRadius: "6px", justifyContent: "center", height: "36px", cursor: "pointer" }} onClick={() => setIncludeDelivery(v => !v)}>
-          <span style={{ fontSize: "0.6rem", color: "#6a6a82", lineHeight: 1 }}>DOSTAWA 2%</span>
-          <span style={{ fontSize: "0.8rem", color: includeDelivery ? "#4ecb71" : "#e05555", fontWeight: 700, marginTop: "0.1rem" }}>{includeDelivery ? "TAK" : "NIE"}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ==========================================
-// 4. SEKCJA PODGLĄDU WYNIKÓW (PREVIEW BOX)
-// ==========================================
-function CalculatorResults({ result, allegro, includeDelivery, isPositive, isNegative, onSave }) {
-  if (!result) {
-    return (
-      <div style={{ background: "#121218", borderRadius: "12px", padding: "1.25rem", border: "1px solid #1e1e26", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ color: "#4a4a5e", fontSize: "0.85rem", textAlign: "center" }}>
-          Wprowadź cenę oferty po lewej stronie, aby zobaczyć podgląd marży.
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ 
-      background: "#121218", 
-      borderRadius: "12px", 
-      padding: "1.25rem", 
-      border: isPositive ? "1px solid #1a3a22" : isNegative ? "1px solid #3a1a1a" : "1px solid #1e1e26",
-      display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "1rem"
-    }}>
-      <div>
-        <div style={{ fontSize: "0.68rem", color: "#6a6a82", marginBottom: "0.5rem" }}>STRUKTURA FINANSOWA</div>
-        <ResultRow label="Cena netto ze sprzedaży" value={formatPLN(result.netto)} dimmed />
-        <ResultRow label={`Prowizja Allegro (${allegro}%)`} value={"− " + formatPLN(result.allegroFee)} negative />
-        <ResultRow label="Logistyka InPost" value={"− " + formatPLN(result.shipping)} negative />
-        {includeDelivery && <ResultRow label="Obsługa dostawy 2%" value={"− " + formatPLN(result.deliveryCost)} negative />}
-        {result.costPLN && <ResultRow label="Koszt zakupu (Przeliczony)" value={formatPLN(result.costPLN)} dimmed />}
-        
-        <div style={{ borderTop: "1px solid #1e1e26", marginTop: "0.5rem", paddingTop: "0.4rem" }}>
-          <ResultRow label="Wpływ na konto (Netto)" value={formatPLN(result.income)} accent />
-        </div>
-      </div>
-
-      {result.profit !== undefined && (
-        <div style={{ background: isPositive ? "#0f2214" : isNegative ? "#220f0f" : "#161622", borderRadius: "8px", padding: "0.75rem 1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <span style={{ fontSize: "0.6rem", color: "#6a6a82", display: "block" }}>CZYSTY ZYSK</span>
-            <span style={{ fontSize: "1.4rem", fontWeight: 800, color: isPositive ? "#4ecb71" : isNegative ? "#e05555" : "#e8e4d9" }}>
-              {isPositive ? "+" : ""}{formatPLN(result.profit)}
-            </span>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <span style={{ fontSize: "0.6rem", color: "#6a6a82", display: "block" }}>MARŻA ZWROTU</span>
-            <span style={{ fontSize: "1.2rem", fontWeight: 700, color: isPositive ? "#4ecb71" : isNegative ? "#e05555" : "#e8e4d9" }}>
-              {formatPct(result.margin)}
-            </span>
-          </div>
-        </div>
-      )}
-
-      <button
-        onClick={onSave}
-        style={{ width: "100%", background: "linear-gradient(135deg, #4ecb71 0%, #2a9d47 100%)", border: "none", borderRadius: "6px", color: "#0d0d11", fontSize: "0.88rem", fontWeight: 600, padding: "0.6rem", cursor: "pointer", fontFamily: "inherit" }}
-      >
-        ＋ ZAPISZ DO LISTY ZBIORCZEJ
-      </button>
-    </div>
-  );
-}
-
-// ==========================================
-// 5. SEKCJA HISTORII REJESTRU (DATATABLE)
-// ==========================================
-function CalculationsTable({ list, onRemove }) {
-  return (
-    <div style={{ background: "#121218", borderRadius: "12px", padding: "1.25rem", border: "1px solid #1e1e26", width: "100%", maxWidth: "1140px", marginTop: "1.5rem" }}>
-      <div style={{ fontSize: "0.68rem", color: "#6a6a82", fontWeight: 500, marginBottom: "0.75rem" }}>
-        REJESTR WYCEN PRZYGOTOWANYCH DO EKSPORTU ({list.length})
-      </div>
-
-      {list.length === 0 ? (
-        <div style={{ color: "#4a4a5e", fontSize: "0.75rem", textAlign: "center", padding: "2rem 0" }}>
-          Brak pozycji w rejestrze. Kliknij zielony przycisk wyżej, aby utworzyć arkusz zbiorczy.
-        </div>
-      ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table className="calc-table">
-            <thead>
-              <tr>
-                <th>Produkt</th>
-                <th>EAN / SKU</th>
-                <th>Dostawca</th>
-                <th>Oferta Brutto</th>
-                <th>Zakup</th>
-                <th>Wpływ Netto</th>
-                <th>Zysk Czysty</th>
-                <th>Marża</th>
-                <th style={{ width: "40px" }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.map(item => (
-                <tr key={item.id}>
-                  <td style={{ fontWeight: 500 }}>{item.name}</td>
-                  <td style={{ color: "#6a6a82" }}>{item.ean}</td>
-                  <td style={{ color: "#8a8a9e" }}>{item.supplier}</td>
-                  <td>{formatPLN(item.offerPrice)}</td>
-                  <td style={{ color: "#a5a5b5" }}>
-                    {item.currency !== "PLN" ? `${item.purchaseCost} ${item.currency}` : formatPLN(item.purchaseCost)}
-                  </td>
-                  <td style={{ color: "#f5a623" }}>{formatPLN(item.income)}</td>
-                  <td style={{ color: item.profit > 0 ? "#4ecb71" : "#e05555", fontWeight: 500 }}>
-                    {formatPLN(item.profit)}
-                  </td>
-                  <td style={{ color: item.margin > 0 ? "#4ecb71" : "#e05555", fontWeight: 500 }}>
-                    {formatPct(item.margin)}
-                  </td>
-                  <td>
-                    <button 
-                      onClick={() => onRemove(item.id)}
-                      style={{ background: "transparent", border: "none", color: "#4a4a5e", cursor: "pointer", fontSize: "0.85rem" }}
-                    >
-                      ✕
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ==========================================
-// 6. GŁÓWNY ORKIESTRATOR (APLIKACJA ROOT)
-// ==========================================
 export default function KalkulatorAllegro() {
+  // Stan produktu
   const [prodName, setProdName] = useState("");
   const [prodEan, setProdEan] = useState("");
   const [offerPrice, setOfferPrice] = useState("");
   const [purchaseCost, setPurchaseCost] = useState("");
 
+  // Zapamiętywanie w localStorage
   const [supplierName, setSupplierName] = useState(() => localStorage.getItem("calcallegro_supplier") || "");
   const [purchaseCurrency, setPurchaseCurrency] = useState(() => localStorage.getItem("calcallegro_currency") || "PLN");
   const [allegro, setAllegro] = useState(() => localStorage.getItem("calcallegro_allegro") || "10");
@@ -357,11 +102,13 @@ export default function KalkulatorAllegro() {
   const [ratesDate, setRatesDate] = useState(null);
   const [savedCalculations, setSavedCalculations] = useState([]);
 
+  // Zapisywanie ustawień w locie
   useEffect(() => { localStorage.setItem("calcallegro_supplier", supplierName); }, [supplierName]);
   useEffect(() => { localStorage.setItem("calcallegro_currency", purchaseCurrency); }, [purchaseCurrency]);
   useEffect(() => { localStorage.setItem("calcallegro_allegro", allegro); }, [allegro]);
   useEffect(() => { localStorage.setItem("calcallegro_vat", vat.toString()); }, [vat]);
 
+  // Pobieranie biblioteki XLSX do eksportu
   useEffect(() => {
     if (!window.XLSX) {
       const script = document.createElement("script");
@@ -390,7 +137,7 @@ export default function KalkulatorAllegro() {
         setRatesLoading(false);
       })
       .catch(() => {
-        setRatesError("Błąd synchronizacji kursów");
+        setRatesError("Błąd pobierania kursów");
         setRates({ PLN: 1, EUR: 4.27, USD: 3.92, GBP: 5.02, CHF: 4.38, CZK: 0.173, RON: 0.86, CNY: 0.541 });
         setRatesLoading(false);
       });
@@ -501,80 +248,274 @@ export default function KalkulatorAllegro() {
     const worksheet = window.XLSX.utils.json_to_sheet(dataForExcel);
     const workbook = window.XLSX.utils.book_new();
     window.XLSX.utils.book_append_sheet(workbook, worksheet, "Kalkulacje Allegro");
-    window.XLSX.writeFile(workbook, `Kalkulacje_Allegro_${new Date().toISOString().slice(0,10)}.xlsx`);
+    window.XLSX.writeFile(workbook, `Kalkulacja_Allegro_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
   return (
     <div style={{
-      minHeight: "100vh", width: "100%", background: "#0d0d11",
-      fontFamily: "'DM Mono', 'Courier New', monospace", color: "#e8e4d9",
-      padding: "1.5rem", display: "flex", flexDirection: "column", alignItems: "center",
+      minHeight: "100vh",
+      width: "100%",
+      background: "#0f0f13",
+      fontFamily: "'DM Mono', 'Courier New', monospace",
+      color: "#e8e4d9",
+      padding: "2rem 1rem",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
     }}>
       <style>{`
-        html, body, #root { margin: 0; padding: 0; width: 100%; min-height: 100vh; background-color: #0d0d11; }
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800&display=swap');
+        
+        html, body, #root { margin: 0; padding: 0; width: 100%; min-height: 100vh; background-color: #0f0f13; }
         * { box-sizing: border-box; }
-        input:focus, select:focus { outline: none; border-color: #f5a623 !important; }
+        input:focus, select:focus { outline: none; }
         .pill { cursor: pointer; transition: all 0.15s; }
-        .row-result { border-bottom: 1px solid #1e1e26; padding: 0.45rem 0; display: flex; justify-content: space-between; align-items: center; }
+        .pill:hover { opacity: 0.85; }
+        .toggle-track { transition: background 0.2s; }
+        .row-result { border-bottom: 1px solid #2a2a32; padding: 0.5rem 0; display: flex; justify-content: space-between; align-items: center; }
         .row-result:last-child { border-bottom: none; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .fadeup { animation: fadeUp 0.3s ease; }
         .spin { animation: spin 1s linear infinite; display: inline-block; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .cur-btn { border: none; cursor: pointer; transition: all 0.15s; font-family: inherit; }
-        select option { background: #16161e; color: #e8e4d9; }
+        .cur-btn:hover { transform: translateY(-1px); }
+        select option { background: #1e1e28; color: #e8e4d9; }
 
-        .workspace-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem; width: 100%; max-width: 1140px; }
-        .calc-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left; }
-        .calc-table th { background: #121218; color: #6a6a82; padding: 0.75rem 0.6rem; font-weight: 500; border-bottom: 1px solid #22222e; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 0.05em; }
-        .calc-table td { padding: 0.75rem 0.6rem; border-bottom: 1px solid #161622; color: #e8e4d9; }
-        .calc-table tr:hover { background: #14141c; }
-
-        @media (max-width: 850px) { .workspace-grid { grid-template-columns: 1fr; gap: 1rem; } }
+        .calc-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left; margin-top: 1rem; }
+        .calc-table th { background: #1e1e28; color: #8a8a9e; padding: 0.6rem; font-weight: 500; border-bottom: 1px solid #2a2a36; }
+        .calc-table td { padding: 0.6rem; border-bottom: 1px solid #1e1e28; color: #e8e4d9; }
+        .calc-table tr:hover { background: #1c1c24; }
       `}</style>
 
-      {/* 1. NOWY KOMPONENT: TOOLBAR */}
-      <Toolbar 
-        ratesLoading={ratesLoading} 
-        ratesError={ratesError} 
-        ratesDate={ratesDate} 
-        count={savedCalculations.length} 
-        onRefresh={fetchRatesData} 
-        onExport={handleExportToExcel} 
-      />
-
-      {/* Obszar Roboczy */}
-      <div className="workspace-grid">
-        
-        {/* 2. WYDZIELONY KOMPONENT: FORMULARZ WEJŚCIOWY */}
-        <CalculatorInputs 
-          supplierName={supplierName} setSupplierName={setSupplierName}
-          prodName={prodName} setProdName={setProdName}
-          prodEan={prodEan} setProdEan={setProdEan}
-          offerPrice={offerPrice} setOfferPrice={setOfferPrice}
-          purchaseCost={purchaseCost} setPurchaseCost={setPurchaseCost}
-          purchaseCurrency={purchaseCurrency} setPurchaseCurrency={setPurchaseCurrency}
-          allegro={allegro} setAllegro={setAllegro}
-          vat={vat} setVat={setVat}
-          includeDelivery={includeDelivery} setIncludeDelivery={setIncludeDelivery}
-          currentRate={currentRate} ratesLoading={ratesLoading}
-        />
-
-        {/* 3. WYDZIELONY KOMPONENT: KARTA PODGLĄDU WYNIKÓW */}
-        <CalculatorResults 
-          result={result}
-          allegro={allegro}
-          includeDelivery={includeDelivery}
-          isPositive={isPositive}
-          isNegative={isNegative}
-          onSave={handleAddToList}
-        />
-
+      {/* Header */}
+      <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+        <div style={{ fontFamily: "'Syne', sans-serif", fontSize: "clamp(1.8rem, 5vw, 3rem)", fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1, background: "linear-gradient(135deg, #f5a623 0%, #f0623a 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>KALKULATOR</div>
+        <div style={{ fontFamily: "'Syne', sans-serif", fontSize: "clamp(1.8rem, 5vw, 3rem)", fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1, color: "#e8e4d9" }}>MARŻY ALLEGRO</div>
+        <div style={{ color: "#5a5a6e", fontSize: "0.78rem", marginTop: "0.5rem", letterSpacing: "0.1em" }}>PROWIZJE · VAT · KONTRAHENCI · AUTOSAVE · EKSPORT XLSX</div>
       </div>
 
-      {/* 4. WYDZIELONY KOMPONENT: TABELA HISTORII */}
-      <CalculationsTable 
-        list={savedCalculations} 
-        onRemove={handleRemoveFromList} 
-      />
+      <div style={{ width: "100%", maxWidth: "680px", display: "flex", flexDirection: "column", gap: "1rem" }}>
+
+        {/* Sekcja Dostawcy (Autosave) */}
+        <div style={{ background: "#16161e", borderRadius: "16px", padding: "1.5rem", border: "1px solid #2a2a36" }}>
+          <div style={{ fontSize: "0.7rem", letterSpacing: "0.12em", color: "#5a5a6e", marginBottom: "1.2rem" }}>DANE KONTRAHENTA</div>
+          <Field label="Nazwa dostawcy / hurtowni" value={supplierName} onChange={setSupplierName} placeholder="np. Centrala Gadżetów Sp. z o.o. (zostanie zapamiętane)" />
+        </div>
+
+        {/* Dane Identyfikacyjne Produktu */}
+        <div style={{ background: "#16161e", borderRadius: "16px", padding: "1.5rem", border: "1px solid #2a2a36" }}>
+          <div style={{ fontSize: "0.7rem", letterSpacing: "0.12em", color: "#5a5a6e", marginBottom: "1.2rem" }}>BIEŻĄCY PRODUKT</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+            <Field label="Nazwa produktu" value={prodName} onChange={setProdName} placeholder="np. Słuchawki Bezprzewodowe X" />
+            <Field label="Kod EAN / SKU" value={prodEan} onChange={setProdEan} placeholder="np. 5901234567890" />
+          </div>
+        </div>
+
+        {/* Inputs card */}
+        <div style={{ background: "#16161e", borderRadius: "16px", padding: "1.5rem", border: "1px solid #2a2a36" }}>
+          <div style={{ fontSize: "0.7rem", letterSpacing: "0.12em", color: "#5a5a6e", marginBottom: "1.2rem" }}>DANE FINANSOWE</div>
+
+          <Field label="Cena oferty (zł)" value={offerPrice} onChange={setOfferPrice} placeholder="np. 89,99" />
+
+          {/* Koszt zakupu z wyborem waluty */}
+          <div style={{ marginBottom: "1rem" }}>
+            <label style={{ fontSize: "0.7rem", letterSpacing: "0.1em", color: "#5a5a6e", display: "block", marginBottom: "0.4rem" }}>KOSZT ZAKUPU</label>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={purchaseCost}
+                onChange={e => setPurchaseCost(e.target.value)}
+                placeholder={`np. ${purchaseCurrency === "PLN" ? "45,00" : purchaseCurrency === "EUR" ? "10,50" : "15,00"}`}
+                style={{ flex: 1, background: "#1e1e28", border: "1px solid #3a3a48", borderRadius: "8px", color: "#e8e4d9", fontSize: "1.05rem", fontFamily: "inherit", padding: "0.6rem 0.9rem" }}
+              />
+              <select
+                value={purchaseCurrency}
+                onChange={e => setPurchaseCurrency(e.target.value)}
+                style={{ background: "#1e1e28", border: "1px solid #3a3a48", borderRadius: "8px", color: "#f5a623", fontSize: "0.9rem", fontFamily: "inherit", fontWeight: 500, padding: "0.5rem 0.6rem", cursor: "pointer", minWidth: "80px" }}
+              >
+                {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
+              </select>
+            </div>
+
+            {purchaseCurrency !== "PLN" && (
+              <div style={{ marginTop: "0.45rem", display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.7rem" }}>
+                {ratesLoading ? (
+                  <span style={{ color: "#5a5a6e" }}><span className="spin">⟳</span> Pobieranie kursu...</span>
+                ) : currentRate ? (
+                  <>
+                    <span style={{ background: "#1e1e28", border: "1px solid #2a3a2a", borderRadius: "5px", padding: "0.15rem 0.5rem", color: "#4ecb71", fontSize: "0.72rem" }}>
+                      1 {purchaseCurrency} = {currentRate.toFixed(4)} PLN
+                    </span>
+                    {purchaseCost && costInPLN() && <span style={{ color: "#8a8a9e" }}>= {formatPLN(costInPLN())}</span>}
+                    {ratesDate && <span style={{ color: "#3a3a4e", marginLeft: "auto" }}>kurs z {ratesDate}</span>}
+                  </>
+                ) : ratesError ? (
+                  <span style={{ color: "#c04040" }}>{ratesError}</span>
+                ) : null}
+              </div>
+            )}
+          </div>
+
+          {/* Szybki wybór waluty */}
+          <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", marginBottom: "1.2rem" }}>
+            {CURRENCIES.map(c => (
+              <button
+                key={c.code}
+                className="cur-btn"
+                onClick={() => setPurchaseCurrency(c.code)}
+                style={{ background: purchaseCurrency === c.code ? "linear-gradient(135deg,#f5a623,#f0623a)" : "#22222e", color: purchaseCurrency === c.code ? "#0f0f13" : "#5a5a6e", borderRadius: "6px", padding: "0.2rem 0.55rem", fontSize: "0.72rem", fontWeight: purchaseCurrency === c.code ? 500 : 400, border: purchaseCurrency === c.code ? "none" : "1px solid #2a2a36" }}
+              >
+                {c.flag} {c.code}
+              </button>
+            ))}
+            <button
+              className="cur-btn pill"
+              onClick={fetchRatesData}
+              title="Odśwież kursy"
+              style={{ background: "#22222e", color: "#5a5a6e", borderRadius: "6px", padding: "0.2rem 0.55rem", fontSize: "0.72rem", border: "1px solid #2a2a36", marginLeft: "auto" }}
+            >
+              {ratesLoading ? <span className="spin">⟳</span> : "⟳"} kursy
+            </button>
+          </div>
+
+          {/* Prowizja */}
+          <div style={{ marginBottom: "0.4rem", fontSize: "0.7rem", letterSpacing: "0.12em", color: "#5a5a6e" }}>PROWIZJA ALLEGRO</div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <input type="text" inputMode="decimal" value={allegro} onChange={e => setAllegro(e.target.value)} style={{ width: "80px", background: "#1e1e28", border: "1px solid #3a3a48", borderRadius: "8px", color: "#f5a623", fontSize: "1.1rem", fontFamily: "inherit", fontWeight: 500, padding: "0.45rem 0.7rem", textAlign: "center" }} />
+            <span style={{ color: "#5a5a6e", fontSize: "0.9rem" }}>%</span>
+            <div style={{ display: "flex", gap: "0.4rem", marginLeft: "0.4rem", flexWrap: "wrap" }}>
+              {[5, 8, 10, 12, 15].map(v => (
+                <button key={v} className="pill" onClick={() => setAllegro(String(v))} style={{ background: parseFloat(allegro) === v ? "#f5a623" : "#2a2a36", color: parseFloat(allegro) === v ? "#0f0f13" : "#8a8a9e", border: "none", borderRadius: "6px", padding: "0.25rem 0.6rem", fontSize: "0.75rem", fontFamily: "inherit", cursor: "pointer" }}>{v}%</button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* VAT + Dostawa */}
+        <div style={{ background: "#16161e", borderRadius: "16px", padding: "1.5rem", border: "1px solid #2a2a36", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+          <div>
+            <div style={{ fontSize: "0.7rem", letterSpacing: "0.12em", color: "#5a5a6e", marginBottom: "0.8rem" }}>STAWKA VAT</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+              {VAT_OPTIONS.map(v => (
+                <button key={v} className="pill" onClick={() => setVat(v)} style={{ background: vat === v ? "linear-gradient(135deg, #f5a623, #f0623a)" : "#2a2a36", color: vat === v ? "#0f0f13" : "#8a8a9e", border: "none", borderRadius: "8px", padding: "0.5rem 0.8rem", fontSize: "0.9rem", fontFamily: "inherit", fontWeight: vat === v ? 500 : 400, cursor: "pointer", textAlign: "left" }}>
+                  {v}% VAT {v === 23 && <span style={{ fontSize: "0.65rem", marginLeft: "0.4rem", opacity: 0.7 }}>standard</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: "0.7rem", letterSpacing: "0.12em", color: "#5a5a6e", marginBottom: "0.8rem" }}>KOSZT DOSTAWY</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+              <div style={{ fontSize: "0.75rem", color: "#8a8a9e", lineHeight: 1.4 }}>Doliczyć 2% kosztu dostawy?</div>
+              <div className="pill" onClick={() => setIncludeDelivery(v => !v)} style={{ display: "flex", alignItems: "center", gap: "0.7rem", marginTop: "0.3rem", cursor: "pointer", userSelect: "none" }}>
+                <div className="toggle-track" style={{ width: "44px", height: "24px", borderRadius: "12px", background: includeDelivery ? "#f5a623" : "#2a2a36", position: "relative", flexShrink: 0 }}>
+                  <div style={{ position: "absolute", top: "3px", left: includeDelivery ? "23px" : "3px", width: "18px", height: "18px", borderRadius: "50%", background: includeDelivery ? "#0f0f13" : "#5a5a6e", transition: "left 0.2s" }} />
+                </div>
+                <span style={{ fontSize: "0.85rem", color: includeDelivery ? "#f5a623" : "#5a5a6e", fontWeight: includeDelivery ? 500 : 400 }}>{includeDelivery ? "TAK" : "NIE"}</span>
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "#3a3a4e", lineHeight: 1.4 }}>{includeDelivery ? "2% ceny oferty doliczone" : "Nie wliczany"}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Wyniki */}
+        {result && (
+          <div className="fadeup" style={{ background: "#16161e", borderRadius: "16px", padding: "1.5rem", border: isPositive ? "1px solid #2a4a2e" : isNegative ? "1px solid #4a2a2a" : "1px solid #2a2a36" }}>
+            <div style={{ fontSize: "0.7rem", letterSpacing: "0.12em", color: "#5a5a6e", marginBottom: "1rem" }}>WYNIKI KALKULACJI</div>
+
+            <div style={{ marginBottom: "1rem" }}>
+              <ResultRow label="Cena netto (po VAT)" value={formatPLN(result.netto)} dimmed />
+              <ResultRow label={`Prowizja Allegro (${allegro}%)`} value={"− " + formatPLN(result.allegroFee)} negative />
+              <ResultRow label="Wysyłka InPost" value={"− " + formatPLN(result.shipping)} negative />
+              {includeDelivery && <ResultRow label="Koszt dostawy 2%" value={"− " + formatPLN(result.deliveryCost)} negative />}
+              {result.costPLN && <ResultRow label={`Koszt zakupu (${purchaseCost} ${purchaseCurrency})`} value={formatPLN(result.costPLN)} dimmed />}
+              <div style={{ borderTop: "1px solid #2a2a36", paddingTop: "0.6rem", marginTop: "0.3rem" }}>
+                <ResultRow label="Wpływ do nas (Zysk operacyjny Netto)" value={formatPLN(result.income)} accent />
+              </div>
+            </div>
+
+            {result.profit !== undefined && (
+              <div style={{ background: isPositive ? "#1a2e1c" : isNegative ? "#2e1a1a" : "#1e1e28", borderRadius: "10px", padding: "1rem 1.2rem", marginTop: "0.5rem", marginBottom: "1rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontSize: "0.65rem", letterSpacing: "0.1em", color: "#5a5a6e", marginBottom: "0.3rem" }}>ZYSK / STRATA CZYSTA</div>
+                    <div style={{ fontFamily: "'Syne', sans-serif", fontSize: "1.8rem", fontWeight: 800, color: isPositive ? "#4ecb71" : isNegative ? "#e05555" : "#e8e4d9", lineHeight: 1 }}>
+                      {isPositive ? "+" : ""}{formatPLN(result.profit)}
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: "#5a5a6e", marginTop: "0.3rem" }}>po koszcie zakupu (+2% kapitał: {formatPLN(result.costPlus2)})</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: "0.65rem", letterSpacing: "0.1em", color: "#5a5a6e", marginBottom: "0.3rem" }}>MARŻA</div>
+                    <div style={{ fontFamily: "'Syne', sans-serif", fontSize: "1.5rem", fontWeight: 700, color: isPositive ? "#4ecb71" : isNegative ? "#e05555" : "#e8e4d9" }}>{formatPct(result.margin)}</div>
+                    <div style={{ fontSize: "0.65rem", color: "#3a3a4e", marginTop: "0.15rem" }}>marża brutto: {formatPct(result.grossMargin)}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={handleAddToList}
+              style={{ width: "100%", background: "linear-gradient(135deg, #4ecb71 0%, #2a9d47 100%)", border: "none", borderRadius: "8px", color: "#0f0f13", fontSize: "0.95rem", fontWeight: 600, fontFamily: "inherit", padding: "0.75rem", cursor: "pointer" }}
+            >
+              ＋ DODAJ TĘ KALKULACJĘ DO LISTY
+            </button>
+          </div>
+        )}
+
+        {/* Tabela historii i eksport */}
+        <div style={{ background: "#16161e", borderRadius: "16px", padding: "1.5rem", border: "1px solid #2a2a36", marginTop: "0.5rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+            <div style={{ fontSize: "0.7rem", letterSpacing: "0.12em", color: "#5a5a6e" }}>ZAPISANE KALKULACJE ({savedCalculations.length})</div>
+            {savedCalculations.length > 0 && (
+              <button onClick={handleExportToExcel} style={{ background: "#f5a623", color: "#0f0f13", border: "none", borderRadius: "6px", padding: "0.4rem 0.8rem", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                📥 POBIERZ LISTĘ JAKO XLSX
+              </button>
+            )}
+          </div>
+
+          {savedCalculations.length === 0 ? (
+            <div style={{ color: "#3a3a50", fontSize: "0.8rem", textAlign: "center", padding: "1.5rem 0" }}>Lista jest pusta. Skonfiguruj produkt i kliknij „Dodaj tę kalkulację do listy”.</div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table className="calc-table">
+                <thead>
+                  <tr>
+                    <th>Produkt</th>
+                    <th>EAN</th>
+                    <th>Dostawca</th>
+                    <th>Oferta</th>
+                    <th>Zysk</th>
+                    <th>Marża</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {savedCalculations.map(item => (
+                    <tr key={item.id}>
+                      <td style={{ fontWeight: 500 }}>{item.name}</td>
+                      <td style={{ color: "#6a6a7e" }}>{item.ean}</td>
+                      <td style={{ color: "#a5a5b5" }}>{item.supplier}</td>
+                      <td>{formatPLN(item.offerPrice)}</td>
+                      <td style={{ color: item.profit > 0 ? "#4ecb71" : "#e05555" }}>{formatPLN(item.profit)}</td>
+                      <td style={{ color: item.margin > 0 ? "#4ecb71" : "#e05555" }}>{formatPct(item.margin)}</td>
+                      <td>
+                        <button onClick={() => handleRemoveFromList(item.id)} style={{ background: "transparent", border: "none", color: "#5a5a6e", cursor: "pointer", fontSize: "0.9rem" }}>✕</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div style={{ textAlign: "center", fontSize: "0.65rem", color: "#2a2a3a", letterSpacing: "0.05em", paddingBottom: "1rem" }}>
+          Kursy walut: frankfurter.app (ECB) · Repozytorium uproszczone
+        </div>
+      </div>
     </div>
   );
 }
