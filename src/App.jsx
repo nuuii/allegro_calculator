@@ -1,5 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 
+// ==========================================
+// 1. STAŁE GLOBALNE I FUNKCJE POMOCNICZE
+// ==========================================
 const SHIPPING_TIERS = [
   { max: 29.99, cost: 0 },
   { max: 44.99, cost: 1.59 },
@@ -37,6 +40,62 @@ function formatPLN(val) {
 function formatPct(val) {
   if (val === null || val === undefined || isNaN(val)) return "—";
   return (val * 100).toFixed(2).replace(".", ",") + " %";
+}
+
+// ==========================================
+// 2. ELEMENTY INTERFEJSU (ATOMS / MOLECULES)
+// ==========================================
+function Toolbar({ ratesLoading, ratesError, ratesDate, count, onRefresh, onExport }) {
+  return (
+    <div style={{
+      width: "100%",
+      maxWidth: "1140px",
+      background: "#121218",
+      border: "1px solid #1e1e26",
+      borderRadius: "8px",
+      padding: "0.6rem 1.2rem",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: "1.5rem",
+      flexWrap: "wrap",
+      gap: "0.8rem"
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontSize: "0.72rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+          <span style={{ 
+            width: "8px", height: "8px", borderRadius: "50%", 
+            background: ratesLoading ? "#f5a623" : ratesError ? "#e05555" : "#4ecb71" 
+          }} />
+          <span style={{ color: "#6a6a82", fontWeight: 500 }}>NBP/ECB API:</span>
+          <span style={{ color: "#e8e4d9" }}>
+            {ratesLoading ? "Synchronizacja..." : ratesError ? "Tryb Offline" : `Połączono (${ratesDate || 'Aktualne'})`}
+          </span>
+        </div>
+        <button 
+          onClick={onRefresh} 
+          disabled={ratesLoading}
+          style={{ background: "#1e1e28", border: "1px solid #2d2d3d", color: "#8a8a9e", padding: "0.2rem 0.5rem", borderRadius: "4px", cursor: "pointer", fontSize: "0.65rem" }}
+        >
+          {ratesLoading ? "..." : "⟳ Odśwież"}
+        </button>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: "1.2rem" }}>
+        <div style={{ fontSize: "0.72rem", color: "#6a6a82" }}>
+          REJESTR sesji: <strong style={{ color: "#f5a623" }}>{count} szt.</strong>
+        </div>
+        {count > 0 && (
+          <button
+            onClick={onExport}
+            style={{ background: "#f5a623", color: "#0d0d11", border: "none", borderRadius: "4px", padding: "0.35rem 0.8rem", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+          >
+            📥 Eksportuj XLSX
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function Field({ label, value, onChange, placeholder, note }) {
@@ -79,6 +138,204 @@ function ResultRow({ label, value, negative, accent, dimmed }) {
   );
 }
 
+// ==========================================
+// 3. SEKCJA FORMULARZA WEJŚCIOWEGO
+// ==========================================
+function CalculatorInputs({ 
+  supplierName, setSupplierName, prodName, setProdName, prodEan, setProdEan, 
+  offerPrice, setOfferPrice, purchaseCost, setPurchaseCost, purchaseCurrency, setPurchaseCurrency,
+  allegro, setAllegro, vat, setVat, includeDelivery, setIncludeDelivery, currentRate, ratesLoading
+}) {
+  return (
+    <div style={{ background: "#121218", borderRadius: "12px", padding: "1.25rem", border: "1px solid #1e1e26", display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <div>
+        <Field label="Dostawca / Hurtownia" value={supplierName} onChange={setSupplierName} placeholder="Nazwa dostawcy (zostanie zapamiętana)" />
+      </div>
+      <div style={{ height: "1px", background: "#1e1e26" }} />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+        <Field label="Nazwa produktu" value={prodName} onChange={setProdName} placeholder="np. Słuchawki X" />
+        <Field label="Kod EAN / SKU" value={prodEan} onChange={setProdEan} placeholder="np. 590123..." />
+      </div>
+      <div style={{ height: "1px", background: "#1e1e26" }} />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+        <Field label="Cena oferty brutto" value={offerPrice} onChange={setOfferPrice} placeholder="np. 89,99" />
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <label style={{ fontSize: "0.68rem", color: "#6a6a82", marginBottom: "0.3rem", fontWeight: 500 }}>KOSZT ZAKUPU</label>
+          <div style={{ display: "flex", gap: "0.4rem" }}>
+            <input type="text" inputMode="decimal" value={purchaseCost} onChange={e => setPurchaseCost(e.target.value)} placeholder="Cena" style={{ flex: 1, background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#e8e4d9", fontSize: "0.95rem", fontFamily: "inherit", padding: "0.5rem" }} />
+            <select value={purchaseCurrency} onChange={e => setPurchaseCurrency(e.target.value)} style={{ background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#f5a623", fontSize: "0.85rem", fontFamily: "inherit", padding: "0.5rem", cursor: "pointer" }}>
+              {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem", background: "#161622", padding: "0.5rem", borderRadius: "6px" }}>
+        <div style={{ display: "flex", gap: "0.25rem" }}>
+          {CURRENCIES.map(c => (
+            <button key={c.code} className="cur-btn" onClick={() => setPurchaseCurrency(c.code)} style={{ background: purchaseCurrency === c.code ? "#f5a623" : "#22222e", color: purchaseCurrency === c.code ? "#0d0d11" : "#8a8a9e", borderRadius: "4px", padding: "0.15rem 0.4rem", fontSize: "0.68rem", fontWeight: 500 }}>{c.code}</button>
+          ))}
+        </div>
+        <div style={{ fontSize: "0.68rem" }}>
+          {ratesLoading ? <span style={{ color: "#6a6a82" }}><span className="spin">⟳</span> API...</span> : currentRate && purchaseCurrency !== "PLN" ? (
+            <span style={{ color: "#4ecb71" }}>1 {purchaseCurrency} = {currentRate.toFixed(4)} zł</span>
+          ) : <span style={{ color: "#4a4a5e" }}>Baza: PLN</span>}
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: "0.75rem", alignItems: "end" }}>
+        <div>
+          <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.3rem" }}>PROWIZJA %</label>
+          <div style={{ display: "flex", gap: "0.3rem" }}>
+            <input type="text" value={allegro} onChange={e => setAllegro(e.target.value)} style={{ width: "50px", background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#f5a623", fontSize: "0.95rem", padding: "0.5rem", textAlign: "center", fontFamily: "inherit" }} />
+            <div style={{ display: "flex", gap: "0.15rem" }}>
+              {[5, 10, 15].map(v => <button key={v} onClick={() => setAllegro(String(v))} style={{ background: "#22222e", color: "#8a8a9e", border: "none", borderRadius: "4px", fontSize: "0.65rem", padding: "0.2rem 0.35rem", cursor: "pointer" }}>{v}%</button>)}
+            </div>
+          </div>
+        </div>
+        <div>
+          <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.3rem" }}>VAT</label>
+          <div style={{ display: "flex", gap: "0.2rem" }}>
+            {VAT_OPTIONS.map(v => <button key={v} onClick={() => setVat(v)} style={{ flex: 1, background: vat === v ? "linear-gradient(135deg, #f5a623, #f0623a)" : "#22222e", color: vat === v ? "#0d0d11" : "#8a8a9e", border: "none", borderRadius: "5px", padding: "0.5rem 0", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{v}%</button>)}
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "#161622", padding: "0.4rem 0.5rem", borderRadius: "6px", justifyContent: "center", height: "36px", cursor: "pointer" }} onClick={() => setIncludeDelivery(v => !v)}>
+          <span style={{ fontSize: "0.6rem", color: "#6a6a82", lineHeight: 1 }}>DOSTAWA 2%</span>
+          <span style={{ fontSize: "0.8rem", color: includeDelivery ? "#4ecb71" : "#e05555", fontWeight: 700, marginTop: "0.1rem" }}>{includeDelivery ? "TAK" : "NIE"}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// 4. SEKCJA PODGLĄDU WYNIKÓW (PREVIEW BOX)
+// ==========================================
+function CalculatorResults({ result, allegro, includeDelivery, isPositive, isNegative, onSave }) {
+  if (!result) {
+    return (
+      <div style={{ background: "#121218", borderRadius: "12px", padding: "1.25rem", border: "1px solid #1e1e26", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ color: "#4a4a5e", fontSize: "0.85rem", textAlign: "center" }}>
+          Wprowadź cenę oferty po lewej stronie, aby zobaczyć podgląd marży.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ 
+      background: "#121218", 
+      borderRadius: "12px", 
+      padding: "1.25rem", 
+      border: isPositive ? "1px solid #1a3a22" : isNegative ? "1px solid #3a1a1a" : "1px solid #1e1e26",
+      display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "1rem"
+    }}>
+      <div>
+        <div style={{ fontSize: "0.68rem", color: "#6a6a82", marginBottom: "0.5rem" }}>STRUKTURA FINANSOWA</div>
+        <ResultRow label="Cena netto ze sprzedaży" value={formatPLN(result.netto)} dimmed />
+        <ResultRow label={`Prowizja Allegro (${allegro}%)`} value={"− " + formatPLN(result.allegroFee)} negative />
+        <ResultRow label="Logistyka InPost" value={"− " + formatPLN(result.shipping)} negative />
+        {includeDelivery && <ResultRow label="Obsługa dostawy 2%" value={"− " + formatPLN(result.deliveryCost)} negative />}
+        {result.costPLN && <ResultRow label="Koszt zakupu (Przeliczony)" value={formatPLN(result.costPLN)} dimmed />}
+        
+        <div style={{ borderTop: "1px solid #1e1e26", marginTop: "0.5rem", paddingTop: "0.4rem" }}>
+          <ResultRow label="Wpływ na konto (Netto)" value={formatPLN(result.income)} accent />
+        </div>
+      </div>
+
+      {result.profit !== undefined && (
+        <div style={{ background: isPositive ? "#0f2214" : isNegative ? "#220f0f" : "#161622", borderRadius: "8px", padding: "0.75rem 1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <span style={{ fontSize: "0.6rem", color: "#6a6a82", display: "block" }}>CZYSTY ZYSK</span>
+            <span style={{ fontSize: "1.4rem", fontWeight: 800, color: isPositive ? "#4ecb71" : isNegative ? "#e05555" : "#e8e4d9" }}>
+              {isPositive ? "+" : ""}{formatPLN(result.profit)}
+            </span>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <span style={{ fontSize: "0.6rem", color: "#6a6a82", display: "block" }}>MARŻA ZWROTU</span>
+            <span style={{ fontSize: "1.2rem", fontWeight: 700, color: isPositive ? "#4ecb71" : isNegative ? "#e05555" : "#e8e4d9" }}>
+              {formatPct(result.margin)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={onSave}
+        style={{ width: "100%", background: "linear-gradient(135deg, #4ecb71 0%, #2a9d47 100%)", border: "none", borderRadius: "6px", color: "#0d0d11", fontSize: "0.88rem", fontWeight: 600, padding: "0.6rem", cursor: "pointer", fontFamily: "inherit" }}
+      >
+        ＋ ZAPISZ DO LISTY ZBIORCZEJ
+      </button>
+    </div>
+  );
+}
+
+// ==========================================
+// 5. SEKCJA HISTORII REJESTRU (DATATABLE)
+// ==========================================
+function CalculationsTable({ list, onRemove }) {
+  return (
+    <div style={{ background: "#121218", borderRadius: "12px", padding: "1.25rem", border: "1px solid #1e1e26", width: "100%", maxWidth: "1140px", marginTop: "1.5rem" }}>
+      <div style={{ fontSize: "0.68rem", color: "#6a6a82", fontWeight: 500, marginBottom: "0.75rem" }}>
+        REJESTR WYCEN PRZYGOTOWANYCH DO EKSPORTU ({list.length})
+      </div>
+
+      {list.length === 0 ? (
+        <div style={{ color: "#4a4a5e", fontSize: "0.75rem", textAlign: "center", padding: "2rem 0" }}>
+          Brak pozycji w rejestrze. Kliknij zielony przycisk wyżej, aby utworzyć arkusz zbiorczy.
+        </div>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table className="calc-table">
+            <thead>
+              <tr>
+                <th>Produkt</th>
+                <th>EAN / SKU</th>
+                <th>Dostawca</th>
+                <th>Oferta Brutto</th>
+                <th>Zakup</th>
+                <th>Wpływ Netto</th>
+                <th>Zysk Czysty</th>
+                <th>Marża</th>
+                <th style={{ width: "40px" }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map(item => (
+                <tr key={item.id}>
+                  <td style={{ fontWeight: 500 }}>{item.name}</td>
+                  <td style={{ color: "#6a6a82" }}>{item.ean}</td>
+                  <td style={{ color: "#8a8a9e" }}>{item.supplier}</td>
+                  <td>{formatPLN(item.offerPrice)}</td>
+                  <td style={{ color: "#a5a5b5" }}>
+                    {item.currency !== "PLN" ? `${item.purchaseCost} ${item.currency}` : formatPLN(item.purchaseCost)}
+                  </td>
+                  <td style={{ color: "#f5a623" }}>{formatPLN(item.income)}</td>
+                  <td style={{ color: item.profit > 0 ? "#4ecb71" : "#e05555", fontWeight: 500 }}>
+                    {formatPLN(item.profit)}
+                  </td>
+                  <td style={{ color: item.margin > 0 ? "#4ecb71" : "#e05555", fontWeight: 500 }}>
+                    {formatPct(item.margin)}
+                  </td>
+                  <td>
+                    <button 
+                      onClick={() => onRemove(item.id)}
+                      style={{ background: "transparent", border: "none", color: "#4a4a5e", cursor: "pointer", fontSize: "0.85rem" }}
+                    >
+                      ✕
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// 6. GŁÓWNY ORKIESTRATOR (APLIKACJA ROOT)
+// ==========================================
 export default function KalkulatorAllegro() {
   const [prodName, setProdName] = useState("");
   const [prodEan, setProdEan] = useState("");
@@ -133,7 +390,7 @@ export default function KalkulatorAllegro() {
         setRatesLoading(false);
       })
       .catch(() => {
-        setRatesError("Błąd kursów walut");
+        setRatesError("Błąd synchronizacji kursów");
         setRates({ PLN: 1, EUR: 4.27, USD: 3.92, GBP: 5.02, CHF: 4.38, CZK: 0.173, RON: 0.86, CNY: 0.541 });
         setRatesLoading(false);
       });
@@ -249,24 +506,15 @@ export default function KalkulatorAllegro() {
 
   return (
     <div style={{
-      minHeight: "100vh",
-      width: "100%",
-      background: "#0d0d11",
-      fontFamily: "'DM Mono', 'Courier New', monospace",
-      color: "#e8e4d9",
-      padding: "1.5rem",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
+      minHeight: "100vh", width: "100%", background: "#0d0d11",
+      fontFamily: "'DM Mono', 'Courier New', monospace", color: "#e8e4d9",
+      padding: "1.5rem", display: "flex", flexDirection: "column", alignItems: "center",
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800&display=swap');
-        
         html, body, #root { margin: 0; padding: 0; width: 100%; min-height: 100vh; background-color: #0d0d11; }
         * { box-sizing: border-box; }
         input:focus, select:focus { outline: none; border-color: #f5a623 !important; }
         .pill { cursor: pointer; transition: all 0.15s; }
-        .pill:hover { opacity: 0.85; }
         .row-result { border-bottom: 1px solid #1e1e26; padding: 0.45rem 0; display: flex; justify-content: space-between; align-items: center; }
         .row-result:last-child { border-bottom: none; }
         .spin { animation: spin 1s linear infinite; display: inline-block; }
@@ -274,275 +522,59 @@ export default function KalkulatorAllegro() {
         .cur-btn { border: none; cursor: pointer; transition: all 0.15s; font-family: inherit; }
         select option { background: #16161e; color: #e8e4d9; }
 
-        /* Klasy nowoczesnego Gridu */
-        .workspace-grid {
-          display: grid;
-          grid-template-columns: 1.2fr 1fr;
-          gap: 1.5rem;
-          width: 100%;
-          max-width: 1140px;
-        }
-
+        .workspace-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem; width: 100%; max-width: 1140px; }
         .calc-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left; }
         .calc-table th { background: #121218; color: #6a6a82; padding: 0.75rem 0.6rem; font-weight: 500; border-bottom: 1px solid #22222e; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 0.05em; }
         .calc-table td { padding: 0.75rem 0.6rem; border-bottom: 1px solid #161622; color: #e8e4d9; }
         .calc-table tr:hover { background: #14141c; }
 
-        @media (max-width: 850px) {
-          .workspace-grid { grid-template-columns: 1fr; gap: 1rem; }
-        }
+        @media (max-width: 850px) { .workspace-grid { grid-template-columns: 1fr; gap: 1rem; } }
       `}</style>
 
-      {/* Kompaktowy Header */}
-      <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-        <h1 style={{
-          fontFamily: "'Syne', sans-serif",
-          fontSize: "clamp(1.5rem, 4vw, 2.2rem)",
-          fontWeight: 800,
-          letterSpacing: "-0.02em",
-          margin: 0,
-          background: "linear-gradient(135deg, #f5a623 0%, #f0623a 100%)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-        }}>KALKULATOR MARŻY ALLEGRO</h1>
-        <p style={{ color: "#4a4a5e", fontSize: "0.7rem", margin: "0.2rem 0 0 0", letterSpacing: "0.08em" }}>
-          SYSTEM OPERACYJNY WYCENY PRODUKTÓW · AUTOSAVE ACTIVE
-        </p>
-      </div>
+      {/* 1. NOWY KOMPONENT: TOOLBAR */}
+      <Toolbar 
+        ratesLoading={ratesLoading} 
+        ratesError={ratesError} 
+        ratesDate={ratesDate} 
+        count={savedCalculations.length} 
+        onRefresh={fetchRatesData} 
+        onExport={handleExportToExcel} 
+      />
 
-      {/* Główny obszar roboczy - podział na 2 kolumny */}
+      {/* Obszar Roboczy */}
       <div className="workspace-grid">
         
-        {/* LEWA KOLUMNA: Wszystkie Inputy */}
-        <div style={{ background: "#121218", borderRadius: "12px", padding: "1.25rem", border: "1px solid #1e1e26", display: "flex", flexDirection: "column", gap: "1rem" }}>
-          
-          {/* Sekcja Kontrahenta */}
-          <div>
-            <Field 
-              label="Dostawca / Hurtownia" 
-              value={supplierName} 
-              onChange={setSupplierName} 
-              placeholder="Nazwa dostawcy (zostanie zapamiętana)" 
-            />
-          </div>
+        {/* 2. WYDZIELONY KOMPONENT: FORMULARZ WEJŚCIOWY */}
+        <CalculatorInputs 
+          supplierName={supplierName} setSupplierName={setSupplierName}
+          prodName={prodName} setProdName={setProdName}
+          prodEan={prodEan} setProdEan={setProdEan}
+          offerPrice={offerPrice} setOfferPrice={setOfferPrice}
+          purchaseCost={purchaseCost} setPurchaseCost={setPurchaseCost}
+          purchaseCurrency={purchaseCurrency} setPurchaseCurrency={setPurchaseCurrency}
+          allegro={allegro} setAllegro={setAllegro}
+          vat={vat} setVat={setVat}
+          includeDelivery={includeDelivery} setIncludeDelivery={setIncludeDelivery}
+          currentRate={currentRate} ratesLoading={ratesLoading}
+        />
 
-          <div style={{ height: "1px", background: "#1e1e26" }} />
-
-          {/* Sekcja Identyfikacji Towaru */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-            <Field label="Nazwa produktu" value={prodName} onChange={setProdName} placeholder="np. Słuchawki X" />
-            <Field label="Kod EAN / SKU" value={prodEan} onChange={setProdEan} placeholder="np. 590123..." />
-          </div>
-
-          <div style={{ height: "1px", background: "#1e1e26" }} />
-
-          {/* Dane Finansowe i Waluta */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-            <Field label="Cena oferty brutto" value={offerPrice} onChange={setOfferPrice} placeholder="np. 89,99" />
-            
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <label style={{ fontSize: "0.68rem", letterSpacing: "0.08em", color: "#6a6a82", marginBottom: "0.3rem", fontWeight: 500 }}>KOSZT ZAKUPU</label>
-              <div style={{ display: "flex", gap: "0.4rem" }}>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={purchaseCost}
-                  onChange={e => setPurchaseCost(e.target.value)}
-                  placeholder="Cena"
-                  style={{ flex: 1, background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#e8e4d9", fontSize: "0.95rem", fontFamily: "inherit", padding: "0.5rem" }}
-                />
-                <select
-                  value={purchaseCurrency}
-                  onChange={e => setPurchaseCurrency(e.target.value)}
-                  style={{ background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#f5a623", fontSize: "0.85rem", fontFamily: "inherit", padding: "0.5rem", cursor: "pointer" }}
-                >
-                  {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Kursy walut i szybki wybór */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem", background: "#161622", padding: "0.5rem", borderRadius: "6px" }}>
-            <div style={{ display: "flex", gap: "0.25rem" }}>
-              {CURRENCIES.map(c => (
-                <button
-                  key={c.code}
-                  className="cur-btn"
-                  onClick={() => setPurchaseCurrency(c.code)}
-                  style={{ background: purchaseCurrency === c.code ? "#f5a623" : "#22222e", color: purchaseCurrency === c.code ? "#0d0d11" : "#8a8a9e", borderRadius: "4px", padding: "0.15rem 0.4rem", fontSize: "0.68rem", fontWeight: 500 }}
-                >
-                  {c.code}
-                </button>
-              ))}
-            </div>
-            <div style={{ fontSize: "0.68rem" }}>
-              {ratesLoading ? <span style={{ color: "#6a6a82" }}><span className="spin">⟳</span> API...</span> : currentRate && purchaseCurrency !== "PLN" ? (
-                <span style={{ color: "#4ecb71" }}>1 {purchaseCurrency} = {currentRate.toFixed(4)} zł</span>
-              ) : <span style={{ color: "#4a4a5e" }}>Baza: PLN</span>}
-            </div>
-          </div>
-
-          {/* Prowizje, VAT i Logistyka obok siebie */}
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: "0.75rem", alignItems: "end" }}>
-            <div>
-              <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.3rem" }}>PROWIZJA %</label>
-              <div style={{ display: "flex", gap: "0.3rem" }}>
-                <input type="text" value={allegro} onChange={e => setAllegro(e.target.value)} style={{ width: "50px", background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#f5a623", fontSize: "0.95rem", padding: "0.5rem", textAlign: "center", fontFamily: "inherit" }} />
-                <div style={{ display: "flex", gap: "0.15rem" }}>
-                  {[5, 10, 15].map(v => (
-                    <button key={v} onClick={() => setAllegro(String(v))} style={{ background: "#22222e", color: "#8a8a9e", border: "none", borderRadius: "4px", fontSize: "0.65rem", padding: "0.2rem 0.35rem", cursor: "pointer" }}>{v}%</button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.3rem" }}>VAT</label>
-              <div style={{ display: "flex", gap: "0.2rem" }}>
-                {VAT_OPTIONS.map(v => (
-                  <button key={v} onClick={() => setVat(v)} style={{ flex: 1, background: vat === v ? "linear-gradient(135deg, #f5a623, #f0623a)" : "#22222e", color: vat === v ? "#0d0d11" : "#8a8a9e", border: "none", borderRadius: "5px", padding: "0.5rem 0", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>{v}%</button>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "#161622", padding: "0.4rem 0.5rem", borderRadius: "6px", justifyContent: "center", height: "36px", cursor: "pointer" }} onClick={() => setIncludeDelivery(v => !v)}>
-              <span style={{ fontSize: "0.6rem", color: "#6a6a82", lineHeight: 1 }}>DOSTAWA 2%</span>
-              <span style={{ fontSize: "0.8rem", color: includeDelivery ? "#4ecb71" : "#e05555", fontWeight: 700, marginTop: "0.1rem" }}>{includeDelivery ? "TAK" : "NIE"}</span>
-            </div>
-          </div>
-
-        </div>
-
-        {/* PRAWA KOLUMNA: Karta Wyników (Generowana dynamicznie) */}
-        <div style={{ 
-          background: "#121218", 
-          borderRadius: "12px", 
-          padding: "1.25rem", 
-          border: result ? (isPositive ? "1px solid #1a3a22" : isNegative ? "1px solid #3a1a1a" : "1px solid #1e1e26") : "1px solid #1e1e26",
-          display: "flex", 
-          flexDirection: "column", 
-          justifyContent: "space-between" 
-        }}>
-          {!result ? (
-            <div style={{ color: "#4a4a5e", fontSize: "0.85rem", textAlign: "center", margin: "auto 0" }}>
-              Wprowadź cenę oferty po lewej stronie, aby zobaczyć natychmiastowy podgląd marży.
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between", gap: "1rem" }}>
-              <div>
-                <div style={{ fontSize: "0.68rem", letterSpacing: "0.08em", color: "#6a6a82", marginBottom: "0.5rem" }}>STRUKTURA FINANSOWA</div>
-                <ResultRow label="Cena netto ze sprzedaży" value={formatPLN(result.netto)} dimmed />
-                <ResultRow label={`Prowizja Allegro (${allegro}%)`} value={"− " + formatPLN(result.allegroFee)} negative />
-                <ResultRow label="Logistyka InPost" value={"− " + formatPLN(result.shipping)} negative />
-                {includeDelivery && <ResultRow label="Obsługa dostawy 2%" value={"− " + formatPLN(result.deliveryCost)} negative />}
-                {result.costPLN && <ResultRow label="Koszt zakupu (Przeliczony)" value={formatPLN(result.costPLN)} dimmed />}
-                
-                <div style={{ borderTop: "1px solid #1e1e26", marginTop: "0.5rem", paddingTop: "0.4rem" }}>
-                  <ResultRow label="Wpływ na konto (Netto)" value={formatPLN(result.income)} accent />
-                </div>
-              </div>
-
-              {/* Box Czystego Zysku */}
-              {result.profit !== undefined && (
-                <div style={{ background: isPositive ? "#0f2214" : isNegative ? "#220f0f" : "#161622", borderRadius: "8px", padding: "0.75rem 1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <span style={{ fontSize: "0.6rem", color: "#6a6a82", display: "block" }}>CZYSTY ZYSK</span>
-                    <span style={{ fontSize: "1.4rem", fontWeight: 800, color: isPositive ? "#4ecb71" : isNegative ? "#e05555" : "#e8e4d9" }}>
-                      {isPositive ? "+" : ""}{formatPLN(result.profit)}
-                    </span>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <span style={{ fontSize: "0.6rem", color: "#6a6a82", display: "block" }}>MARŻA ZWROTU</span>
-                    <span style={{ fontSize: "1.2rem", fontWeight: 700, color: isPositive ? "#4ecb71" : isNegative ? "#e05555" : "#e8e4d9" }}>
-                      {formatPct(result.margin)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={handleAddToList}
-                style={{ width: "100%", background: "linear-gradient(135deg, #4ecb71 0%, #2a9d47 100%)", border: "none", borderRadius: "6px", color: "#0d0d11", fontSize: "0.88rem", fontWeight: 600, padding: "0.6rem", cursor: "pointer", fontFamily: "inherit" }}
-              >
-                ＋ ZAPISZ DO LISTY ZBIORCZEJ
-              </button>
-            </div>
-          )}
-        </div>
+        {/* 3. WYDZIELONY KOMPONENT: KARTA PODGLĄDU WYNIKÓW */}
+        <CalculatorResults 
+          result={result}
+          allegro={allegro}
+          includeDelivery={includeDelivery}
+          isPositive={isPositive}
+          isNegative={isNegative}
+          onSave={handleAddToList}
+        />
 
       </div>
 
-      {/* DOLNA SEKCJA: Pełnowymiarowa Tabela Zapisanych Kalkulacji */}
-      <div style={{ background: "#121218", borderRadius: "12px", padding: "1.25rem", border: "1px solid #1e1e26", width: "100%", maxWidth: "1140px", marginTop: "1.5rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-          <div style={{ fontSize: "0.68rem", letterSpacing: "0.08em", color: "#6a6a82", fontWeight: 500 }}>
-            REJESTR WYCEN PRZYGOTOWANYCH DO EKSPORTU ({savedCalculations.length})
-          </div>
-          {savedCalculations.length > 0 && (
-            <button
-              onClick={handleExportToExcel}
-              style={{ background: "#f5a623", color: "#0d0d11", border: "none", borderRadius: "4px", padding: "0.35rem 0.75rem", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
-            >
-              📥 EKSPORTUJ DO PLIKU XLSX (EXCEL)
-            </button>
-          )}
-        </div>
-
-        {savedCalculations.length === 0 ? (
-          <div style={{ color: "#4a4a5e", fontSize: "0.75rem", textAlign: "center", padding: "2rem 0" }}>
-            Brak pozycji w rejestrze. Kliknij zielony przycisk wyżej, aby utworzyć arkusz zbiorczy.
-          </div>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table className="calc-table">
-              <thead>
-                <tr>
-                  <th>Produkt</th>
-                  <th>EAN / SKU</th>
-                  <th>Dostawca</th>
-                  <th>Oferta Brutto</th>
-                  <th>Zakup</th>
-                  <th>Wpływ Netto</th>
-                  <th>Zysk Czysty</th>
-                  <th>Marża</th>
-                  <th style={{ width: "40px" }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {savedCalculations.map(item => (
-                  <tr key={item.id}>
-                    <td style={{ fontWeight: 500 }}>{item.name}</td>
-                    <td style={{ color: "#6a6a82" }}>{item.ean}</td>
-                    <td style={{ color: "#8a8a9e" }}>{item.supplier}</td>
-                    <td>{formatPLN(item.offerPrice)}</td>
-                    <td style={{ color: "#a5a5b5" }}>
-                      {item.currency !== "PLN" ? `${item.purchaseCost} ${item.currency}` : formatPLN(item.purchaseCost)}
-                    </td>
-                    <td style={{ color: "#f5a623" }}>{formatPLN(item.income)}</td>
-                    <td style={{ color: item.profit > 0 ? "#4ecb71" : "#e05555", fontWeight: 500 }}>
-                      {formatPLN(item.profit)}
-                    </td>
-                    <td style={{ color: item.margin > 0 ? "#4ecb71" : "#e05555", fontWeight: 500 }}>
-                      {formatPct(item.margin)}
-                    </td>
-                    <td>
-                      <button 
-                        onClick={() => handleRemoveFromList(item.id)}
-                        style={{ background: "transparent", border: "none", color: "#4a4a5e", cursor: "pointer", fontSize: "0.85rem" }}
-                        onMouseEnter={e => e.target.style.color = "#e05555"}
-                        onMouseLeave={e => e.target.style.color = "#4a4a5e"}
-                      >
-                        ✕
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      {/* 4. WYDZIELONY KOMPONENT: TABELA HISTORII */}
+      <CalculationsTable 
+        list={savedCalculations} 
+        onRemove={handleRemoveFromList} 
+      />
     </div>
   );
 }
