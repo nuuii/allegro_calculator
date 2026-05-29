@@ -192,6 +192,7 @@ export default function KalkulatorAllegro() {
       name: prodName.trim() || "Produkt bez nazwy",
       ean: prodEan.trim() || "—",
       supplier: supplierName.trim() || "—",
+      quantity: quantity ? parseInt(quantity, 10) : null,
       offerPrice: parseFloat(offerPrice.replace(",", ".")),
       purchaseCost: purchaseCost ? parseFloat(purchaseCost.replace(",", ".")) : 0,
       currency: purchaseCurrency,
@@ -210,6 +211,7 @@ export default function KalkulatorAllegro() {
     setProdEan("");
     setOfferPrice("");
     setPurchaseCost("");
+    setQuantity("");
   };
 
   const handleRemoveFromList = (id) => {
@@ -222,6 +224,7 @@ export default function KalkulatorAllegro() {
     const dataForExcel = savedCalculations.map((item, index) => ({
       "Lp.": index + 1,
       "Nazwa produktu": item.name,
+      "Ilość": item.quantity ? item.quantity : "-",
       "EAN / SKU": item.ean,
       "Dostawca": item.supplier,
       "Cena oferty (Brutto PLN)": item.offerPrice,
@@ -529,6 +532,7 @@ export default function KalkulatorAllegro() {
                   <th>Produkt</th>
                   <th>EAN / SKU</th>
                   <th>Dostawca</th>
+                  <th>Ilość</th>
                   <th>Oferta Brutto</th>
                   <th>Zakup</th>
                   <th>Wpływ Netto</th>
@@ -543,6 +547,7 @@ export default function KalkulatorAllegro() {
                     <td style={{ fontWeight: 500 }}>{item.name}</td>
                     <td style={{ color: "#6a6a82" }}>{item.ean}</td>
                     <td style={{ color: "#8a8a9e" }}>{item.supplier}</td>
+                    <td style={{ color: "#a5a5b5" }}>{item.quantity ? item.quantity : "—"}</td>
                     <td>{formatPLN(item.offerPrice)}</td>
                     <td style={{ color: "#a5a5b5" }}>
                       {item.currency !== "PLN" ? `${item.purchaseCost} ${item.currency}` : formatPLN(item.purchaseCost)}
