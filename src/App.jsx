@@ -47,6 +47,7 @@ export default function KalkulatorAllegro() {
   const [prodEan, setProdEan] = useState("");
   const [offerPrice, setOfferPrice] = useState("");
   const [purchaseCost, setPurchaseCost] = useState("");
+  const [quantity, setQuantity] = useState("");
 
   const [supplierName, setSupplierName] = useState(() => localStorage.getItem("calcallegro_supplier") || "");
   const [purchaseCurrency, setPurchaseCurrency] = useState(() => localStorage.getItem("calcallegro_currency") || "PLN");
@@ -328,7 +329,11 @@ export default function KalkulatorAllegro() {
               <Field label="Nazwa produktu" value={prodName} onChange={setProdName} placeholder="np. Słuchawki X" />
               <Field label="Kod EAN / SKU" value={prodEan} onChange={setProdEan} placeholder="np. 590123..." />
             </div>
-            
+
+            <div style={{ marginTop: "0.6rem" }}>
+              <Field label="Ilość (szt.)" value={quantity} onChange={setQuantity} placeholder="np. 1 (opcjonalne)" />
+            </div>
+
             {/* Przycisk wywołujący automatyczne szukanie przez Apify */}
             <button
               type="button"
