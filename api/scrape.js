@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     }
 
     try {
-      const targetUrl = `https://allegro.pl/listing?string=${encodeURIComponent(ean)}`;
+      const targetUrl = `https://allegro.pl/kategorie?string=${encodeURIComponent(ean)}`;
 
       // Wywołanie aktora na Apify
       const response = await axios.post(
