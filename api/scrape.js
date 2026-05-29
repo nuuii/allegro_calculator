@@ -1,30 +1,4 @@
-import axios from 'axios';
-
-export default async function handler(req, res) {
-  // Obsługa CORS dla frontendu
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  const { action, ean } = req.query;
-
-  // AKCJA 1: Pobieranie kursów walut (Ominięcie blokady CORS serwisu Frankfurter)
-  if (action === 'rates') {
-    try {
-      const response = await axios.get('https://api.frankfurter.app/latest?base=PLN&symbols=EUR,USD,GBP,CHF,CZK,RON,CNY', {
-        timeout: 5000
-      });
-      return res.status(200).json(response.data);
-    } catch (error) {
-      return res.status(500).json({ error: 'Nie udało się pobrać kursów walut z API' });
-    }
-  }
-
-  // AKCJA 2: Scrapowanie danych z Apify po kodzie EAN
+// AKCJA 2: Przeszukiwanie Allegro po EAN za pomocą parseforge~allegro-scraper
   if (ean) {
     const apifyToken = process.env.APIFY_TOKEN;
 
@@ -33,52 +7,60 @@ export default async function handler(req, res) {
     }
 
     try {
-      const targetUrl = `https://allegro.pl/kategorie?string=${encodeURIComponent(ean)}`;
-
-      // Wywołanie aktora na Apify
+      // Wywołujemy nowy endpoint synchroniczny zgodnie z wklejoną specyfikacją OpenAPI
       const response = await axios.post(
-        `https://api.apify.com/v2/acts/e-commerce~allegro-product-detail-scraper/run-sync-get-dataset-items?token=${apifyToken}`,
-        { startUrls: [targetUrl] },
+        `https://api.apify.com/v2/acts/parseforge~allegro-scraper/run-sync-get-dataset-items?token=${apifyToken}`,
+        {
+          // Struktura wejściowa zbieżna ze schematem inputSchema tego aktora
+          searchQuery: ean.trim(), 
+          maxItems: 10 // Ograniczamy pobieranie do 10 ofert, aby skrócić czas i zaoszczędzić limity
+        },
         {
           headers: { 'Content-Type': 'application/json' },
-          timeout: 60000 // Zwiększony timeout na czas pracy bota
+          timeout: 60000 // Aktor potrzebuje czasu na zebranie danych rynkowych
         }
       );
 
       const items = response.data;
 
       if (!items || !Array.isArray(items) || items.length === 0) {
-        return res.status(404).json({ success: false, error: 'Brak ofert dla tego kodu EAN.' });
+        return res.status(404).json({ success: false, error: 'Nie znaleziono ofert na Allegro dla podanego kodu EAN.' });
       }
 
-      const validItems = items.filter(item => item.price && !isNaN(parseFloat(item.price.toString().replace(',', '.'))));
+      // Filtrujemy i oczyszczamy zwrócone przez scraper ceny
+      // Większość listujących scraperów zwraca pole 'price' lub 'pricePln' lub 'currentPrice'
+      const validItems = items.map(item => {
+        let rawPrice = item.price || item.currentPrice || item.pricePln;
+        if (rawPrice) {
+          if (typeof rawPrice === 'string') {
+            // Czyszczenie tekstu (np. "89,90 zł" -> "89.90")
+            rawPrice = rawPrice.replace(/[^0-9.,]/g, '').replace(',', '.');
+          }
+          return {
+            title: item.title || item.name || `Produkt EAN: ${ean}`,
+            price: parseFloat(rawPrice)
+          };
+        }
+        return null;
+      }).filter(item => item && !isNaN(item.price));
 
       if (validItems.length === 0) {
-        return res.status(404).json({ success: false, error: 'Nie udało się odczytać cen z pobranych ofert.' });
+        return res.status(404).json({ success: false, error: 'Znaleziono wyniki, ale struktura cen nie dała się odczytać.' });
       }
 
-      // Sortowanie od najtańszej oferty
-      validItems.sort((a, b) => {
-        const priceA = parseFloat(a.price.toString().replace(',', '.'));
-        const priceB = parseFloat(b.price.toString().replace(',', '.'));
-        return priceA - priceB;
-      });
+      // Sortujemy oferty od najtańszej do najdroższej
+      validItems.sort((a, b) => a.price - b.price);
 
       const cheapestItem = validItems[0];
-      const productName = cheapestItem.title || cheapestItem.name || `Produkt EAN: ${ean}`;
-      const rawPrice = cheapestItem.price.toString().replace(',', '.');
 
       return res.status(200).json({
         success: true,
-        title: productName,
-        price: parseFloat(rawPrice).toFixed(2)
+        title: cheapestItem.title,
+        price: cheapestItem.price.toFixed(2)
       });
 
     } catch (error) {
-      console.error('Apify Error:', error.message);
-      return res.status(500).json({ success: false, error: 'Błąd scrapera Apify lub przekroczony czas połączenia.' });
+      console.error('Parseforge Scraper Error:', error.message);
+      return res.status(500).json({ success: false, error: 'Problem z działaniem bota Parseforge lub przekroczono limit czasu.' });
     }
   }
-
-  return res.status(400).json({ error: 'Niepoprawne żądanie. Wybierz akcję lub podaj EAN.' });
-}
