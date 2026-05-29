@@ -48,6 +48,7 @@ export default function KalkulatorAllegro() {
   const [offerPrice, setOfferPrice] = useState("");
   const [purchaseCost, setPurchaseCost] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [allegroDiscounted, setAllegroDiscounted] = useState(false);
 
   const [supplierName, setSupplierName] = useState(() => localStorage.getItem("calcallegro_supplier") || "");
   const [purchaseCurrency, setPurchaseCurrency] = useState(() => localStorage.getItem("calcallegro_currency") || "PLN");
@@ -152,9 +153,9 @@ export default function KalkulatorAllegro() {
 
     const vatRate = vat / 100;
     const allegroRate = parseFloat(allegro.replace(",", ".")) / 100;
-    
+
     const shipping = getShippingCost(price);
-    const allegroFee = price * allegroRate;
+    const allegroFee = price * allegroRate * (allegroDiscounted ? 0.5 : 1);
     const deliveryCost = includeDelivery ? price * 0.02 : 0;
 
     const totalCostsBrutto = allegroFee + shipping + deliveryCost;
@@ -193,6 +194,7 @@ export default function KalkulatorAllegro() {
       ean: prodEan.trim() || "—",
       supplier: supplierName.trim() || "—",
       quantity: quantity ? parseInt(quantity, 10) : null,
+      allegroDiscounted: allegroDiscounted,
       offerPrice: parseFloat(offerPrice.replace(",", ".")),
       purchaseCost: purchaseCost ? parseFloat(purchaseCost.replace(",", ".")) : 0,
       currency: purchaseCurrency,
@@ -229,6 +231,7 @@ export default function KalkulatorAllegro() {
       "Dostawca": item.supplier,
       "Cena oferty (Brutto PLN)": item.offerPrice,
       "Stawka VAT (%)": item.vat,
+      "Prowizja obniżona": item.allegroDiscounted ? "TAK" : "NIE",
       "Koszt zakupu (Waluta)": item.purchaseCost,
       "Waluta zakupu": item.currency,
       "Kurs waluty": item.exchangeRate ? Math.round(item.exchangeRate * 10000) / 10000 : 1,
@@ -328,13 +331,21 @@ export default function KalkulatorAllegro() {
 
           {/* Sekcja Identyfikacji Towaru */}
           <div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", alignItems: "end" }}>
               <Field label="Nazwa produktu" value={prodName} onChange={setProdName} placeholder="np. Słuchawki X" />
               <Field label="Kod EAN / SKU" value={prodEan} onChange={setProdEan} placeholder="np. 590123..." />
             </div>
 
-            <div style={{ marginTop: "0.6rem" }}>
-              <Field label="Ilość (szt.)" value={quantity} onChange={setQuantity} placeholder="np. 1 (opcjonalne)" />
+            <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", marginTop: "0.45rem" }}>
+              <div style={{ fontSize: "0.68rem", color: "#6a6a82", marginRight: "0.5rem" }}>Ilość (szt.)</div>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={quantity}
+                onChange={e => setQuantity(e.target.value)}
+                placeholder="np. 1 (opcjonalne)"
+                style={{ width: "96px", background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#e8e4d9", fontSize: "0.95rem", fontFamily: "inherit", padding: "0.45rem" }}
+              />
             </div>
 
             {/* Przycisk wywołujący automatyczne szukanie przez Apify */}
@@ -420,6 +431,12 @@ export default function KalkulatorAllegro() {
               <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.3rem" }}>PROWIZJA %</label>
               <div style={{ display: "flex", gap: "0.3rem" }}>
                 <input type="text" value={allegro} onChange={e => setAllegro(e.target.value)} style={{ width: "50px", background: "#1e1e28", border: "1px solid #2d2d3d", borderRadius: "6px", color: "#f5a623", fontSize: "0.95rem", padding: "0.5rem", textAlign: "center", fontFamily: "inherit" }} />
+                <button
+                  onClick={() => setAllegroDiscounted(v => !v)}
+                  style={{ marginLeft: "0.25rem", background: allegroDiscounted ? "linear-gradient(135deg, #4ecb71, #2a9d47)" : "#22222e", color: allegroDiscounted ? "#0d0d11" : "#8a8a9e", border: "none", borderRadius: "4px", fontSize: "0.65rem", padding: "0.25rem 0.5rem", cursor: "pointer", display: "flex", alignItems: "center" }}
+                >
+                  {allegroDiscounted ? "50% RABAT" : "Rabat 50%"}
+                </button>
                 <div style={{ display: "flex", gap: "0.15rem" }}>
                   {[5, 10, 15].map(v => (
                     <button key={v} onClick={() => setAllegro(String(v))} style={{ background: "#22222e", color: "#8a8a9e", border: "none", borderRadius: "4px", fontSize: "0.65rem", padding: "0.2rem 0.35rem", cursor: "pointer" }}>{v}%</button>
