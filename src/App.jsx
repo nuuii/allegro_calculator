@@ -16,6 +16,7 @@ const CURRENCIES = [
   { code: "GBP", symbol: "£", flag: "🇬🇧" },
   { code: "CHF", symbol: "Fr", flag: "🇨🇭" },
   { code: "CZK", symbol: "Kč", flag: "🇨🇿" },
+  { code: "RON", symbol: "lei", flag: "🇷🇴" },
   { code: "CNY", symbol: "¥", flag: "🇨🇳" },
 ];
 
@@ -38,7 +39,6 @@ function formatPct(val) {
   return (val * 100).toFixed(2).replace(".", ",") + " %";
 }
 
-// Komponenty pomocnicze przeniesione do góry / zadeklarowane poprawnie
 function Field({ label, value, onChange, placeholder, note }) {
   return (
     <div style={{ marginBottom: "1rem" }}>
@@ -93,11 +93,10 @@ export default function KalkulatorAllegro() {
   const [ratesError, setRatesError] = useState(null);
   const [ratesDate, setRatesDate] = useState(null);
 
-  // Unifikacja logiki pobierania kursów (brak podwójnego fetchowania)
   const fetchRatesData = useCallback(() => {
     setRatesLoading(true);
     setRatesError(null);
-    fetch("https://api.frankfurter.app/latest?base=PLN&symbols=EUR,USD,GBP,CHF,CZK,CNY")
+    fetch("https://api.frankfurter.app/latest?base=PLN&symbols=EUR,USD,GBP,CHF,CZK,RON,CNY")
       .then(r => {
         if (!r.ok) throw new Error();
         return r.json();
@@ -114,7 +113,7 @@ export default function KalkulatorAllegro() {
       })
       .catch(() => {
         setRatesError("Nie udało się pobrać aktualnych kursów — używam przybliżonych");
-        setRates({ PLN: 1, EUR: 4.27, USD: 3.92, GBP: 5.02, CHF: 4.38, CZK: 0.173, CNY: 0.541 });
+        setRates({ PLN: 1, EUR: 4.27, USD: 3.92, GBP: 5.02, CHF: 4.38, CZK: 0.173, RON: 0.86, CNY: 0.541 });
         setRatesLoading(false);
       });
   }, []);
@@ -137,19 +136,15 @@ export default function KalkulatorAllegro() {
     const vatRate = vat / 100;
     const allegroRate = parseFloat(allegro.replace(",", ".")) / 100;
     
-    // Koszty Allegro (prowizje i wysyłki) zazwyczaj podawane są jako wartości brutto
-    // lub netto + VAT. Dla uproszczenia przyjmijmy korektę matematyczną:
     const shipping = getShippingCost(price);
     const allegroFee = price * allegroRate;
     const deliveryCost = includeDelivery ? price * 0.02 : 0;
 
-    // Przychód brutto ze sprzedaży po odjęciu kosztów operacyjnych brutto
     const totalCostsBrutto = allegroFee + shipping + deliveryCost;
     const incomeBrutto = price - totalCostsBrutto;
     
-    // Wpływ do nas (Netto po odliczeniu podatku VAT od sprzedaży)
-    const netto = price / (1 + vatRate);
     const income = incomeBrutto / (1 + vatRate); 
+    const netto = price / (1 + vatRate);
 
     const costPLN = costInPLN();
     if (costPLN === null) {
@@ -175,6 +170,7 @@ export default function KalkulatorAllegro() {
   return (
     <div style={{
       minHeight: "100vh",
+      width: "100%",
       background: "#0f0f13",
       fontFamily: "'DM Mono', 'Courier New', monospace",
       color: "#e8e4d9",
@@ -185,6 +181,16 @@ export default function KalkulatorAllegro() {
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800&display=swap');
+        
+        /* Gwarancja braku białych pasków i tła na pełnym oknie */
+        html, body, #root {
+          margin: 0;
+          padding: 0;
+          width: 100%;
+          min-height: 100vh;
+          background-color: #0f0f13;
+        }
+
         * { box-sizing: border-box; }
         input:focus, select:focus { outline: none; }
         .pill { cursor: pointer; transition: all 0.15s; }
@@ -247,7 +253,7 @@ export default function KalkulatorAllegro() {
                 inputMode="decimal"
                 value={purchaseCost}
                 onChange={e => setPurchaseCost(e.target.value)}
-                placeholder={`np. ${purchaseCurrency === "PLN" ? "45,00" : purchaseCurrency === "EUR" ? "10,50" : "12,00"}`}
+                placeholder={`np. ${purchaseCurrency === "PLN" ? "45,00" : purchaseCurrency === "EUR" ? "10,50" : "15,00"}`}
                 style={{
                   flex: 1,
                   background: "#1e1e28",
@@ -359,7 +365,7 @@ export default function KalkulatorAllegro() {
                 fontSize: "1.1rem",
                 fontFamily: "inherit",
                 fontWeight: 500,
-                padding: "0.45rem 0.7...rem",
+                padding: "0.45rem 0.7rem",
                 textAlign: "center",
               }}
             />
@@ -472,7 +478,7 @@ export default function KalkulatorAllegro() {
                 <ResultRow
                   label={`Koszt zakupu (${purchaseCost} ${purchaseCurrency} × ${currentRate?.toFixed(4)})`}
                   value={formatPLN(result.costPLN)}
-                  dimed
+                  dimmed
                 />
               )}
               <div style={{ borderTop: "1px solid #2a2a36", paddingTop: "0.6rem", marginTop: "0.3rem" }}>
