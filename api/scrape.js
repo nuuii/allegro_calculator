@@ -47,7 +47,7 @@ export default async function handler(req, res) {
         `https://api.apify.com/v2/acts/parseforge~allegro-scraper/run-sync-get-dataset-items?token=${apifyToken}`,
         {
           searchQuery: ean.trim(), // Przekazujemy czysty EAN do dedykowanego pola wyszukiwarki bota
-          maxItems: 10             // Pobieramy tylko 10 ofert, by skrócić czas wykonania
+          maxItems: 3             // Pobieramy tylko 10 ofert, by skrócić czas wykonania
         },
         {
           headers: { 'Content-Type': 'application/json' },
