@@ -1,4 +1,5 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useState, useEffect, useContext } from 'react';
 import { useApp } from './AppContext.jsx';
 
 const AuthContext = createContext(null);
@@ -53,12 +54,6 @@ export const AuthProvider = ({ children }) => {
     }
   }, [activeProfileId]);
 
-  useEffect(() => {
-    if (!selectedProfileId && profiles.length > 0) {
-      setSelectedProfileId(profiles[0].id);
-    }
-  }, [profiles, selectedProfileId]);
-
   const handleCreateProfile = async (name, pin, pinConfirm, key) => {
     if (!name) {
       setToast({ message: 'Podaj nazwę profilu', type: 'error', visible: true }); return false;
@@ -96,7 +91,7 @@ export const AuthProvider = ({ children }) => {
       setIsUnlocked(true);
       setToast({ message: `Zalogowano jako ${profile.name}`, type: 'success', visible: true });
     } else {
-      alert('Nieprawidłowy PIN');
+      setToast({ message: 'Nieprawidłowy PIN', type: 'error', visible: true });
     }
   };
 
@@ -115,7 +110,7 @@ export const AuthProvider = ({ children }) => {
       setToast({ message: `Przełączono na profil ${profile.name}`, type: 'success', visible: true });
       return true;
     } else {
-      alert('Nieprawidłowy PIN profilu');
+      setToast({ message: 'Nieprawidłowy PIN profilu', type: 'error', visible: true });
       return false;
     }
   };

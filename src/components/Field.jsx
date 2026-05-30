@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function Field({ label, value, onChange, placeholder, note }) {
   return (
     <div style={{ marginBottom: "0.8rem" }}>

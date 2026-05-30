@@ -19,7 +19,7 @@ function getShippingCost(price) {
   return 9.99;
 }
 
-export function useCalculator({ rates, activeProfile }) {
+export function useCalculator({ rates, activeProfile, setToast }) {
   // Input states
   const [prodName, setProdName] = useState("");
   const [prodEan, setProdEan] = useState("");
@@ -98,7 +98,14 @@ export function useCalculator({ rates, activeProfile }) {
   };
 
   const handleAddToList = () => {
-    if (!offerPrice) return;
+    const parsedOfferPrice = parseFloat(offerPrice.replace(",", "."));
+    if (!offerPrice || isNaN(parsedOfferPrice) || parsedOfferPrice <= 0) {
+      setToast?.({ message: "Podaj prawidłową cenę oferty brutto przed dodaniem produktu.", type: 'error', visible: true });
+      return;
+    }
+    if (!purchaseCost) {
+      setToast?.({ message: "Dodano produkt bez kosztu zakupu. Zysk i marża mogą być niepełne.", type: 'info', visible: true });
+    }
     const newItem = {
       id: editingId || Date.now(),
       name: prodName.trim() || "Produkt bez nazwy",
@@ -106,7 +113,7 @@ export function useCalculator({ rates, activeProfile }) {
       supplier: supplierName.trim() || "—",
       quantity: parseInt(quantity, 10) || 1,
       allegroDiscounted,
-      offerPrice: parseFloat(offerPrice.replace(",", ".")) || 0,
+      offerPrice: parsedOfferPrice || 0,
       purchaseCost: purchaseCost ? parseFloat(purchaseCost.replace(",", ".")) : 0,
       currency: purchaseCurrency,
       exchangeRate: purchaseCurrency !== "PLN" ? currentRate : 1,

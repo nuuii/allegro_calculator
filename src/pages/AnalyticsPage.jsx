@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function AnalyticsPage() {
   return (
     <div style={{ width: "100%", maxWidth: "1140px", padding: "2rem", background: "#121218", borderRadius: "12px", border: "1px solid #1e1e26", color: "#e8e4d9" }}>

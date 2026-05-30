@@ -1,3 +1,4 @@
+/* global process */
 import axios from 'axios';
 import { get } from '@vercel/edge-config';
 

@@ -10,6 +10,7 @@ export default function CalculatorPage({
   handleFindCheapestOffer, handleEditItem, handleCancelEdit, handleAddToList, handleRemoveFromList,
   handleExportToExcel, onSaveWholeOffer, currencies, vatOptions, formatPLN, formatPct
 }) {
+  const canAddToList = Boolean(offerPrice && !Number.isNaN(parseFloat(String(offerPrice).replace(",", "."))));
 
   return (
     <div className="calculator-page">
@@ -255,7 +256,7 @@ export default function CalculatorPage({
         <div className={`result-panel ${result ? (isPositive ? "is-positive" : isNegative ? "is-negative" : "") : ""}`}>
           {!result ? (
             <div style={{ color: "#4a4a5e", fontSize: "0.85rem", textAlign: "center", margin: "auto 0" }}>
-              Wprowadź cenę oferty po lewej stronie...
+              Wprowadź cenę oferty po lewej stronie, aby zobaczyć wynik.
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between", gap: "1rem" }}>
@@ -270,6 +271,12 @@ export default function CalculatorPage({
                 {result.costPLN && <ResultRow label="Koszt zakupu (Przeliczony)" value={formatPLN(result.costPLN)} dimmed />}
                 <ResultRow label="Wpływ na konto (Netto)" value={formatPLN(result.income)} accent />
               </div>
+
+              {!purchaseCost && (
+                <div className="calculation-note">
+                  Dodaj koszt zakupu, aby policzyć czysty zysk i marżę.
+                </div>
+              )}
 
               {result.profit !== undefined && (
                 <div style={{ 
@@ -306,6 +313,7 @@ export default function CalculatorPage({
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 <button 
                   onClick={handleAddToList} 
+                  disabled={!canAddToList}
                   style={{ 
                     flex: 1, 
                     background: "linear-gradient(135deg, #4ecb71 0%, #2a9d47 100%)", 
@@ -315,11 +323,12 @@ export default function CalculatorPage({
                     fontSize: "0.88rem", 
                     fontWeight: 600, 
                     padding: "0.6rem", 
-                    cursor: "pointer", 
-                    fontFamily: "inherit"
+                    cursor: canAddToList ? "pointer" : "not-allowed", 
+                    fontFamily: "inherit",
+                    opacity: canAddToList ? 1 : 0.45
                   }}
                 >
-                  {editingId ? "✓ AKTUALIZUJ WYCENĘ" : "＋ ZAPISZ DO LISTY ZBIORCZEJ"}
+                  {editingId ? "✓ AKTUALIZUJ WYCENĘ" : "＋ DODAJ DO ZESTAWIENIA"}
                 </button>
                 {editingId && (
                   <button 

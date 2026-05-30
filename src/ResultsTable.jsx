@@ -33,7 +33,7 @@ export default function ResultsTable({
 
       {savedCalculations.length === 0 ? (
         <div className="results-register__empty">
-          Brak pozycji w rejestrze. Kliknij zielony przycisk wyżej, aby utworzyć arkusz zbiorczy.
+          Dodaj produkty przyciskiem "Dodaj do zestawienia". Gdy lista będzie gotowa, zapisz całe zestawienie w chmurze.
         </div>
       ) : (
         <>
@@ -105,13 +105,42 @@ export default function ResultsTable({
             </table>
           </div>
 
+          <div className="mobile-calculation-list">
+            {savedCalculations.map(item => (
+              <article className="mobile-calculation-card" key={`mobile-${item.id}`}>
+                <div>
+                  <strong>{item.name}</strong>
+                  <span>{item.ean} · {item.supplier}</span>
+                </div>
+                <div className="mobile-calculation-card__metrics">
+                  <div>
+                    <span>Oferta</span>
+                    <strong>{formatPLN(item.offerPrice)}</strong>
+                  </div>
+                  <div>
+                    <span>Zysk</span>
+                    <strong className={item.profit >= 0 ? "positive-value" : "negative-value"}>{formatPLN(item.profit)}</strong>
+                  </div>
+                  <div>
+                    <span>Marża</span>
+                    <strong className={item.margin >= 0 ? "positive-value" : "negative-value"}>{formatPct(item.margin)}</strong>
+                  </div>
+                </div>
+                <div className="mobile-calculation-card__actions">
+                  <button onClick={() => handleEditItem(item)} className="table-action">Edytuj</button>
+                  <button onClick={() => handleRemoveFromList(item.id)} className="secondary-action secondary-action--danger">Usuń</button>
+                </div>
+              </article>
+            ))}
+          </div>
+
           {/* Pasek akcji z przyciskiem zapisu */}
           <div className="results-register__footer">
             <button
               onClick={onSaveWholeOffer}
               className="save-offer-button"
             >
-              ☁️ ZAPISZ ZESTAWIENIE
+              ☁️ ZAPISZ CAŁE ZESTAWIENIE
             </button>
           </div>
         </>
