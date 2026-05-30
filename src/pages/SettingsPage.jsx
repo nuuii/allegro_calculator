@@ -63,10 +63,16 @@ const ProfileSwitchCard = ({ profile, isActive, onSwitch }) => {
 };
 
 export default function SettingsPage({ profiles, activeProfile, edgeConfig, onLogout }) {
-  const { handleApplyChangePin, handleSwitchProfile, isAdmin, handleSetProfileAdmin, isBootstrapAdminProfile } = useAuth();
+  const {
+    handleApplyChangePin, handleSwitchProfile, isAdmin, handleSetProfileAdmin,
+    handleRenameProfile, handleDeleteProfile, isBootstrapAdminProfile
+  } = useAuth();
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
+  const [profileNames, setProfileNames] = useState(() => (
+    Object.fromEntries(profiles.map(profile => [profile.id, profile.name]))
+  ));
 
   const handleChangePin = async () => {
     const success = await handleApplyChangePin(currentPin, newPin, confirmPin);
@@ -139,22 +145,51 @@ export default function SettingsPage({ profiles, activeProfile, edgeConfig, onLo
                 {profiles.map(profile => {
                   const profileIsAdmin = profile.permissions?.admin || profile.role === 'admin';
                   const isBootstrapAdmin = isBootstrapAdminProfile(profile);
+                  const draftName = profileNames[profile.id] ?? profile.name;
 
                   return (
                     <div className="admin-profile-row" key={profile.id}>
-                      <div>
-                        <strong>{profile.name}</strong>
-                        <span>{profileIsAdmin ? 'Administrator' : 'Użytkownik'}</span>
+                      <div className="admin-profile-row__main">
+                        <label className="form-label" htmlFor={`profile-name-${profile.id}`}>Nazwa profilu</label>
+                        <input
+                          id={`profile-name-${profile.id}`}
+                          className="form-input"
+                          value={draftName}
+                          disabled={isBootstrapAdmin}
+                          onChange={event => setProfileNames(prev => ({ ...prev, [profile.id]: event.target.value }))}
+                        />
+                        <span>
+                          {profileIsAdmin ? 'Administrator' : 'Użytkownik'}
+                          {profile.accessKeyHash ? ` · klucz ${profile.accessKeyHash.slice(0, 8)}...` : ' · brak przypisanego klucza'}
+                        </span>
                       </div>
-                      <button
-                        type="button"
-                        className={profileIsAdmin ? "secondary-action secondary-action--danger" : "primary-action primary-action--compact"}
-                        onClick={() => handleSetProfileAdmin(profile.id, !profileIsAdmin)}
-                        disabled={isBootstrapAdmin}
-                        title={isBootstrapAdmin ? 'Główne konto administratora jest chronione' : undefined}
-                      >
-                        {profileIsAdmin ? 'Odbierz admina' : 'Nadaj admina'}
-                      </button>
+                      <div className="admin-profile-row__actions">
+                        <button
+                          type="button"
+                          className="secondary-action"
+                          onClick={() => handleRenameProfile(profile.id, draftName)}
+                          disabled={isBootstrapAdmin || draftName.trim() === profile.name}
+                        >
+                          Zapisz nazwę
+                        </button>
+                        <button
+                          type="button"
+                          className={profileIsAdmin ? "secondary-action secondary-action--danger" : "primary-action primary-action--compact"}
+                          onClick={() => handleSetProfileAdmin(profile.id, !profileIsAdmin)}
+                          disabled={isBootstrapAdmin}
+                          title={isBootstrapAdmin ? 'Główne konto administratora jest chronione' : undefined}
+                        >
+                          {profileIsAdmin ? 'Odbierz admina' : 'Nadaj admina'}
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary-action secondary-action--danger"
+                          onClick={() => handleDeleteProfile(profile.id)}
+                          disabled={isBootstrapAdmin}
+                        >
+                          Usuń profil
+                        </button>
+                      </div>
                     </div>
                   );
                 })}

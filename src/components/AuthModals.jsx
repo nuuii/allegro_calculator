@@ -13,6 +13,44 @@ export function ProfileAuthScreen() {
   const [profilePinConfirm, setProfilePinConfirm] = useState("");
   const [accessKey, setAccessKey] = useState("");
   const [loginPin, setLoginPin] = useState("");
+  const [signupError, setSignupError] = useState("");
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
+
+  const handleSignupSubmit = async () => {
+    setSignupError("");
+
+    if (!profileName.trim()) {
+      setSignupError("Podaj nazwę profilu.");
+      return;
+    }
+    if (!profilePin || profilePin.length < 4) {
+      setSignupError("PIN musi mieć co najmniej 4 cyfry.");
+      return;
+    }
+    if (profilePin !== profilePinConfirm) {
+      setSignupError("PINy nie są zgodne.");
+      return;
+    }
+    if (!accessKey.trim()) {
+      setSignupError("Podaj klucz dostępu.");
+      return;
+    }
+
+    setIsCreatingProfile(true);
+    const success = await handleCreateProfile(profileName, profilePin, profilePinConfirm, accessKey);
+    setIsCreatingProfile(false);
+
+    if (success) {
+      setProfileName('');
+      setProfilePin('');
+      setProfilePinConfirm('');
+      setAccessKey('');
+      setSignupError("");
+      return;
+    }
+
+    setSignupError("Nieprawidłowy klucz dostępu albo klucz został już wykorzystany.");
+  };
 
   return (
     <div className="auth-screen">
@@ -132,25 +170,27 @@ export function ProfileAuthScreen() {
                 className="form-input"
                 type="text"
                 value={accessKey}
-                onChange={e => setAccessKey(e.target.value)}
+                onChange={e => {
+                  setAccessKey(e.target.value);
+                  if (signupError) setSignupError("");
+                }}
                 placeholder="ac_..."
               />
 
               <p className="form-help">Klucz dostępu otrzymasz od administratora wdrożenia.</p>
+              {signupError && (
+                <div className="auth-alert" role="alert">
+                  <strong>Nie można utworzyć profilu</strong>
+                  <span>{signupError}</span>
+                </div>
+              )}
               <button
                 type="button"
-                onClick={async () => {
-                  const success = await handleCreateProfile(profileName, profilePin, profilePinConfirm, accessKey);
-                  if (success) {
-                    setProfileName('');
-                    setProfilePin('');
-                    setProfilePinConfirm('');
-                    setAccessKey('');
-                  }
-                }}
+                onClick={handleSignupSubmit}
                 className="primary-action"
+                disabled={isCreatingProfile}
               >
-                Utwórz profil
+                {isCreatingProfile ? 'Sprawdzanie klucza...' : 'Utwórz profil'}
               </button>
             </>
           )}

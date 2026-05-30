@@ -48,6 +48,30 @@ export default async function handler(req, res) {
     }
 
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const action = body?.action || 'claim';
+    const accessKeyHashToRelease = body?.accessKeyHash?.trim()
+      || (body?.accessKey?.trim() ? hashAccessKey(body.accessKey) : '');
+
+    if (action === 'release') {
+      if (!accessKeyHashToRelease) {
+        return res.status(400).json({ success: false, error: 'Brak identyfikatora klucza do zwolnienia.' });
+      }
+
+      const allowedKeyHashes = getAllowedKeyHashes();
+      if (!allowedKeyHashes.includes(accessKeyHashToRelease)) {
+        return res.status(403).json({ success: false, error: 'Nieprawidłowy identyfikator klucza.' });
+      }
+
+      const preusedKeyHashes = getPreusedKeyHashes();
+      if (preusedKeyHashes.includes(accessKeyHashToRelease)) {
+        return res.status(409).json({ success: false, error: 'Ten klucz jest oznaczony jako stale wykorzystany i nie może wrócić do puli.' });
+      }
+
+      const kv = getKvClient();
+      await kv.del(`access_key_used:${accessKeyHashToRelease}`);
+      return res.status(200).json({ success: true });
+    }
+
     const accessKey = body?.accessKey?.trim();
     const profileName = body?.profileName?.trim() || 'Profil bez nazwy';
 

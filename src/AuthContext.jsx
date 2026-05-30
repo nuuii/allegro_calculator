@@ -156,6 +156,88 @@ export const AuthProvider = ({ children }) => {
     return true;
   };
 
+  const handleRenameProfile = (profileId, nextName) => {
+    if (!isAdmin) {
+      setToast({ message: 'Brak uprawnień administratora.', type: 'error', visible: true });
+      return false;
+    }
+
+    const cleanName = nextName.trim();
+    if (!cleanName) {
+      setToast({ message: 'Nazwa profilu nie może być pusta.', type: 'error', visible: true });
+      return false;
+    }
+
+    const targetProfile = profiles.find(profile => profile.id === profileId);
+    if (!targetProfile) {
+      setToast({ message: 'Nie znaleziono profilu.', type: 'error', visible: true });
+      return false;
+    }
+
+    if (isBootstrapAdminProfile(targetProfile) && cleanName.toLowerCase() !== BOOTSTRAP_ADMIN_NAME) {
+      setToast({ message: 'Nie można zmienić nazwy głównego administratora.', type: 'error', visible: true });
+      return false;
+    }
+
+    const nextProfiles = profiles.map(profile => (
+      profile.id === profileId ? normalizeProfile({ ...profile, name: cleanName }) : profile
+    ));
+
+    saveProfiles(nextProfiles);
+    setToast({ message: `Zmieniono nazwę profilu na ${cleanName}.`, type: 'success', visible: true });
+    return true;
+  };
+
+  const handleDeleteProfile = async (profileId) => {
+    if (!isAdmin) {
+      setToast({ message: 'Brak uprawnień administratora.', type: 'error', visible: true });
+      return false;
+    }
+
+    const targetProfile = profiles.find(profile => profile.id === profileId);
+    if (!targetProfile) {
+      setToast({ message: 'Nie znaleziono profilu.', type: 'error', visible: true });
+      return false;
+    }
+
+    if (isBootstrapAdminProfile(targetProfile)) {
+      setToast({ message: 'Nie można usunąć głównego administratora.', type: 'error', visible: true });
+      return false;
+    }
+
+    if (targetProfile.accessKeyHash || targetProfile.accessKey) {
+      const releaseResponse = await fetch('/api/access-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'release',
+          accessKeyHash: targetProfile.accessKeyHash,
+          accessKey: targetProfile.accessKey,
+        }),
+      });
+      const releaseResult = await releaseResponse.json().catch(() => ({}));
+
+      if (!releaseResponse.ok || !releaseResult.success) {
+        setToast({ message: releaseResult.error || 'Nie udało się zwolnić klucza dostępu.', type: 'error', visible: true });
+        return false;
+      }
+    }
+
+    const nextProfiles = profiles.filter(profile => profile.id !== profileId);
+    saveProfiles(nextProfiles);
+
+    if (activeProfileId === profileId) {
+      setActiveProfileId('');
+      setIsUnlocked(false);
+    }
+    if (selectedProfileId === profileId) {
+      setSelectedProfileId(nextProfiles[0]?.id || '');
+    }
+
+    setToast({ message: `Usunięto profil ${targetProfile.name}. Klucz wrócił do puli, jeśli był przypisany.`, type: 'success', visible: true });
+    return true;
+  };
+
   const handleLoginProfile = async (profileId, pin) => {
     const profile = profiles.find(p => p.id === profileId);
     if (!profile) {
@@ -229,7 +311,7 @@ export const AuthProvider = ({ children }) => {
     profiles, activeProfile, activeProfileId, isUnlocked, isAdmin, logout,
     profileAuthMode, setProfileAuthMode, selectedProfileId, setSelectedProfileId,
     handleCreateProfile, handleLoginProfile, handleSwitchProfile, handleApplyChangePin,
-    handleSetProfileAdmin, isBootstrapAdminProfile
+    handleSetProfileAdmin, handleRenameProfile, handleDeleteProfile, isBootstrapAdminProfile
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

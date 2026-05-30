@@ -1172,6 +1172,26 @@ a:hover {
   line-height: 1.5;
 }
 
+.auth-alert {
+  background: rgba(224, 85, 85, 0.1);
+  border: 1px solid rgba(224, 85, 85, 0.35);
+  border-radius: var(--radius-md);
+  color: #f0b1b1;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem 0.85rem;
+}
+
+.auth-alert strong {
+  color: #ffd0d0;
+  font-size: 0.82rem;
+}
+
+.auth-alert span {
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 .primary-action {
   background: var(--accent);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1317,14 +1337,27 @@ a:hover {
 }
 
 .admin-profile-row {
-  align-items: center;
+  align-items: stretch;
   background: var(--surface-2);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.75rem;
-  justify-content: space-between;
   padding: 0.85rem;
+}
+
+.admin-profile-row__main {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.admin-profile-row__actions {
+  align-content: end;
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(3, auto);
 }
 
 .admin-profile-row strong,
@@ -1345,6 +1378,8 @@ a:hover {
 
 .admin-profile-row button {
   flex: 0 0 auto;
+  min-height: 42px;
+  white-space: nowrap;
 }
 
 @media (max-width: 980px) {
@@ -1363,6 +1398,14 @@ a:hover {
   .workspace-grid,
   .finance-options-grid,
   .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-profile-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-profile-row__actions {
     grid-template-columns: 1fr;
   }
 
