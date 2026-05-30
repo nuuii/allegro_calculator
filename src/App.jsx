@@ -125,7 +125,6 @@ export default function KalkulatorAllegro() {
   const [changeConfirmPin, setChangeConfirmPin] = useState('');
 
   const activeProfile = profiles.find(profile => profile.id === activeProfileId) || null;
-  const availableAccessKeys = ACCESS_KEYS.filter(key => !profiles.some(profile => profile.accessKey === key));
 
   const saveProfiles = (nextProfiles) => {
     setProfiles(nextProfiles);
@@ -655,16 +654,29 @@ export default function KalkulatorAllegro() {
           <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
             {profileAuthMode === 'login' && profiles.length > 0 ? (
               <>
-                <label style={{ fontSize: '0.75rem', color: '#6a6a82' }}>Wybierz profil</label>
-                <select
-                  value={selectedProfileId}
-                  onChange={e => setSelectedProfileId(e.target.value)}
-                  style={{ width: '100%', background: '#1e1e28', border: '1px solid #2d2d3d', borderRadius: 6, color: '#e8e4d9', padding: '0.65rem' }}
-                >
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   {profiles.map(profile => (
-                    <option key={profile.id} value={profile.id}>{profile.name}</option>
+                    <button
+                      key={profile.id}
+                      onClick={() => setSelectedProfileId(profile.id)}
+                      style={{
+                        background: selectedProfileId === profile.id ? '#f5a623' : '#1e1e28',
+                        color: selectedProfileId === profile.id ? '#0d0d11' : '#e8e4d9',
+                        border: '1px solid #2d2d3d',
+                        borderRadius: 8,
+                        padding: '0.85rem',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem'
+                      }}
+                    >
+                      {profile.name}
+                      <div style={{ fontSize: '0.75rem', color: selectedProfileId === profile.id ? '#0d0d11' : '#8a8a9e', marginTop: '0.25rem' }}>
+                        PIN-protected
+                      </div>
+                    </button>
                   ))}
-                </select>
+                </div>
 
                 <label style={{ fontSize: '0.75rem', color: '#6a6a82' }}>PIN</label>
                 <input
@@ -729,26 +741,14 @@ export default function KalkulatorAllegro() {
                 />
 
                 <div style={{ color: '#6a6a82', fontSize: '0.8rem', marginBottom: '0.65rem' }}>
-                  Dostępne klucze: {availableAccessKeys.length}. Klucz musi być z listy, aby utworzyć profil.
+                  Klucz dostępu otrzymasz od administratora. Wpisz go w polu powyżej.
                 </div>
-                {availableAccessKeys.length > 0 && (
-                  <div style={{ color: '#8a8a9e', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
-                    Przykładowe wolne klucze:
-                    <div style={{ marginTop: '0.35rem', background: '#161622', border: '1px solid #2d2d3d', borderRadius: 6, padding: '0.65rem', fontSize: '0.78rem', wordBreak: 'break-all' }}>
-                      {availableAccessKeys.slice(0, 3).join(', ')}{availableAccessKeys.length > 3 ? ' …' : ''}
-                    </div>
-                  </div>
-                )}
                 <button
                   onClick={handleCreateProfile}
-                  disabled={availableAccessKeys.length === 0}
-                  style={{ width: '100%', background: availableAccessKeys.length === 0 ? '#2d2d3d' : 'linear-gradient(135deg, #4ecb71, #2a9d47)', border: 'none', borderRadius: 6, color: '#0d0d11', padding: '0.75rem', fontWeight: 700, cursor: availableAccessKeys.length === 0 ? 'not-allowed' : 'pointer' }}
+                  style={{ width: '100%', background: 'linear-gradient(135deg, #4ecb71, #2a9d47)', border: 'none', borderRadius: 6, color: '#0d0d11', padding: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
                 >
                   Utwórz profil
                 </button>
-                {availableAccessKeys.length === 0 && (
-                  <div style={{ color: '#e05555', fontSize: '0.8rem', marginTop: '0.5rem' }}>Brak dostępnych kluczy. Nie można utworzyć nowego profilu.</div>
-                )}
               </>
             )}
           </div>
