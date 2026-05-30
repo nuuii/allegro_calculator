@@ -54,6 +54,7 @@ export default function CalculatorPage({
   return (
     <div style={{ width: '100%', maxWidth: '1140px' }}>
       <div className="workspace-grid">
+        {/* --- LEWA KOLUMNA: FORMULARZ --- */}
         <div style={{ background: "#121218", borderRadius: "12px", padding: "1.25rem", border: "1px solid #1e1e26", display: "flex", flexDirection: "column", gap: "1rem" }}>
           <div>
             <Field
@@ -217,6 +218,7 @@ export default function CalculatorPage({
           </div>
         </div>
 
+        {/* --- PRAWA KOLUMNA: WYNIKI --- */}
         <div style={{ background: "#121218", borderRadius: "12px", padding: "1.25rem", border: result ? (isPositive ? "1px solid #1a3a22" : isNegative ? "1px solid #3a1a1a" : "1px solid #1e1e26") : "1px solid #1e1e26", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
           {!result ? (
             <div style={{ color: "#4a4a5e", fontSize: "0.85rem", textAlign: "center", margin: "auto 0" }}>
@@ -274,6 +276,7 @@ export default function CalculatorPage({
           )}
         </div>
       </div>
+
       <ResultsTable
         savedCalculations={savedCalculations}
         handleExportToExcel={exportCurrentList}
