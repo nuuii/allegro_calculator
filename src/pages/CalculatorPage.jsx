@@ -225,14 +225,14 @@ export default function CalculatorPage({
           <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between", gap: "1rem" }}>
             <div>
               <div style={{ fontSize: "0.68rem", letterSpacing: "0.08em", color: "#6a6a82", marginBottom: "0.5rem" }}>STRUKTURA FINANSOWA</div>
-              <ResultRow label="Cena netto ze sprzedaży" value={formatPLN(result.netto)} dimmed />
-              <ResultRow label={`Prowizja Allegro (${allegro}%)`} value={"− " + formatPLN(result.allegroFee)} negative />
-              <ResultRow label="Logistyka InPost" value={"− " + formatPLN(result.shipping)} negative />
-              {includeDelivery && <ResultRow label="Obsługa dostawy 2%" value={"− " + formatPLN(result.deliveryCost)} negative />}
-              {result.costPLN && <ResultRow label="Koszt zakupu (Przeliczony)" value={formatPLN(result.costPLN)} dimmed />}
+              <ResultRow label="Cena netto ze sprzedaży" value={result.netto} formatFn={formatPLN} dimmed />
+              <ResultRow label={`Prowizja Allegro (${allegro}%)`} value={result.allegroFee} formatFn={formatPLN} negative />
+              <ResultRow label="Logistyka InPost" value={result.shipping} formatFn={formatPLN} negative />
+              {includeDelivery && <ResultRow label="Obsługa dostawy 2%" value={result.deliveryCost} formatFn={formatPLN} negative />}
+              {result.costPLN && <ResultRow label="Koszt zakupu (Przeliczony)" value={result.costPLN} formatFn={formatPLN} dimmed />}
 
-              <div style={{ borderTop: "1px solid #1e1e26", marginTop: "0.5rem", paddingTop: "0.4rem" }}>
-                <ResultRow label="Wpływ na konto (Netto)" value={formatPLN(result.income)} accent />
+              <div style={{ paddingTop: "0.2rem" }}>
+                <ResultRow label="Wpływ na konto (Netto)" value={result.income} formatFn={formatPLN} accent />
               </div>
             </div>
 

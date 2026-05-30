@@ -59,8 +59,8 @@ export default function SavedOffersPage({ savedOffers, onLoad, onDelete, onExpor
   return (
     <div style={{ width: '100%', maxWidth: '1140px' }}>
       <div style={{ marginBottom: '1.5rem', paddingBottom: '0.75rem', borderBottom: '1px solid #1e1e26' }}>
-        <h2 style={{ margin: 0, fontFamily: "'Syne', sans-serif" }}>Zapisane Zestawienia Ofert</h2>
-        <p style={{ margin: '0.25rem 0 0', color: '#6a6a82', fontSize: '0.9rem' }}>
+        <h2 style={{ margin: 0, fontFamily: "'Syne', sans-serif", color: '#e8e4d9', fontWeight: 700 }}>Zapisane Zestawienia Ofert</h2>
+        <p style={{ margin: '0.25rem 0 0', color: '#8a8a9e', fontSize: '0.9rem', lineHeight: 1.5 }}>
           Zarządzaj swoimi zapisanymi listami produktów. Możesz je wczytać do edycji, pobrać jako plik Excel lub usunąć.
         </p>
       </div>

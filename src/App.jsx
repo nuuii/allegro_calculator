@@ -4,6 +4,7 @@ import { ProfileAuthScreen, ChangePinModal, ProfileManagementModal } from "./com
 import CalculatorPage from "./pages/CalculatorPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import SavedOffersPage from "./pages/SavedOffersPage";
+import SettingsPage from "./pages/SettingsPage";
 import { useAuth } from './AuthContext.jsx';
 import { useApp } from './AppContext.jsx';
 import './App.css';
@@ -42,7 +43,7 @@ function formatPct(val) {
 
 function AppContent() {
   const { rates, ratesLoading, edgeConfig, fetchRatesData, setToast } = useApp();
-  const { activeProfile, logout } = useAuth();
+  const { profiles, activeProfile, logout, handleApplyChangePin, handleSwitchProfile } = useAuth();
   const location = useLocation();
 
   const [prodName, setProdName] = useState("");
@@ -70,7 +71,13 @@ function AppContent() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showChangePinModal, setShowChangePinModal] = useState(false);
   
-  const activeTab = location.pathname === '/saved' ? 'oferty' : 'kalkulator';
+  const getActiveTab = () => {
+    if (location.pathname === '/saved') return 'oferty';
+    if (location.pathname === '/ustawienia') return 'ustawienia';
+    return 'kalkulator';
+  };
+  
+  const activeTab = getActiveTab();
 
   useEffect(() => {
     fetchRatesData();
@@ -271,10 +278,10 @@ function AppContent() {
       <nav style={{ display: "flex", gap: "2rem", background: "#121218", border: "1px solid #1e1e26", padding: "0.75rem 2rem", borderRadius: "10px", width: "100%", maxWidth: "1140px", marginBottom: "1.5rem", alignItems: "center" }}>
         <strong style={{ color: "#f5a623", fontFamily: "'Syne', sans-serif" }}>Allegro Calc v2</strong>
         <div style={{ display: "flex", gap: "1rem" }}>
-          <Link to="/" style={{ color: "#e8e4d9", textDecoration: "none", fontSize: "0.85rem", fontWeight: activeTab === 'kalkulator' ? 700 : 400 }}>
+          <Link to="/" style={{ color: activeTab === 'kalkulator' ? '#e8e4d9' : '#6a6a82', textDecoration: "none", fontSize: "0.85rem", fontWeight: activeTab === 'kalkulator' ? 700 : 400 }}>
             🧮 Kalkulator
           </Link>
-          <Link to="/saved" style={{ color: "#e8e4d9", textDecoration: "none", fontSize: "0.85rem", fontWeight: activeTab === 'oferty' ? 700 : 400 }}>
+          <Link to="/saved" style={{ color: activeTab === 'oferty' ? '#e8e4d9' : '#6a6a82', textDecoration: "none", fontSize: "0.85rem", fontWeight: activeTab === 'oferty' ? 700 : 400 }}>
             📂 Zapisane oferty
           </Link>
           <Link to="/analityka" style={{ color: "#e8e4d9", textDecoration: "none", fontSize: "0.85rem" }}>
@@ -282,8 +289,8 @@ function AppContent() {
           </Link>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", gap: "0.5rem" }}>
-          <button onClick={logout} title="Zablokuj" style={{ background: '#22222e', border: 'none', color: '#f5a623', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer' }}>🔒</button>
-          <button onClick={() => setShowChangePinModal(true)} title="Zmień PIN" style={{ background: '#22222e', border: '1px solid #2d2d3d', color: '#8a8a9e', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer' }}>⚙️</button>
+          <button onClick={logout} title="Zablokuj" style={{ background: '#22222e', border: '1px solid #2d2d3d', color: '#f5a623', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer' }}>🔒</button>
+          <Link to="/ustawienia" title="Ustawienia" style={{ background: activeTab === 'ustawienia' ? '#f5a623' : '#22222e', color: activeTab === 'ustawienia' ? '#0d0d11' : '#8a8a9e', border: '1px solid #2d2d3d', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>⚙️</Link>
           <button onClick={() => setShowProfileModal(true)} title="Profile" style={{ background: '#22222e', border: '1px solid #2d2d3d', color: '#8a8a9e', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer' }}>👤</button>
         </div>
       </nav>
@@ -320,6 +327,15 @@ function AppContent() {
           />
         } />
         <Route path="/analityka" element={<AnalyticsPage />} />
+        <Route path="/ustawienia" element={
+          <SettingsPage
+            profiles={profiles}
+            activeProfile={activeProfile}
+            edgeConfig={edgeConfig}
+            onApplyChangePin={handleApplyChangePin}
+            onSwitchProfile={handleSwitchProfile}
+            onLogout={logout}
+          />} />
       </Routes>
 
       {showChangePinModal && <ChangePinModal onClose={() => setShowChangePinModal(false)} />}

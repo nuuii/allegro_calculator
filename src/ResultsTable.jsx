@@ -39,24 +39,34 @@ export default function ResultsTable({
         <div style={{ overflowX: "auto" }}>
           <table className="calc-table">
             <thead>
-              <tr>
-                <th>Produkt</th><th>EAN / SKU</th><th>Dostawca</th><th>Utworzył</th><th>Ilość</th><th>Oferta Brutto</th><th>Zakup</th><th>Wpływ Netto</th><th>Zysk Czysty</th><th>Marża</th><th style={{ width: "40px" }}></th>
+              <tr>{/* Ulepszone nagłówki z wyrównaniem i stylami */}
+                <th style={{ textAlign: 'left', minWidth: '200px' }}>Produkt</th>
+                <th style={{ textAlign: 'left', minWidth: '140px' }}>EAN / SKU</th>
+                <th style={{ textAlign: 'left', minWidth: '120px' }}>Dostawca</th>
+                <th style={{ textAlign: 'left', minWidth: '100px' }}>Utworzył</th>
+                <th style={{ textAlign: 'right', minWidth: '60px' }}>Ilość</th>
+                <th style={{ textAlign: 'right', minWidth: '120px' }}>Oferta Brutto</th>
+                <th style={{ textAlign: 'right', minWidth: '120px' }}>Zakup</th>
+                <th style={{ textAlign: 'right', minWidth: '120px' }}>Wpływ Netto</th>
+                <th style={{ textAlign: 'right', minWidth: '120px' }}>Zysk Czysty</th>
+                <th style={{ textAlign: 'right', minWidth: '100px' }}>Marża</th>
+                <th style={{ width: "60px" }}></th>{/* Pusty nagłówek dla przycisków akcji */}
               </tr>
             </thead>
             <tbody>
               {savedCalculations.map(item => (
                 <tr key={item.id}>
-                  <td style={{ fontWeight: 500 }}>{item.name}</td>
-                  <td style={{ color: "#6a6a82", cursor: 'pointer' }} onClick={() => handleEanClick(item.ean)} title="Kliknij, aby skopiować EAN">{item.ean}</td>
-                  <td style={{ color: "#8a8a9e" }}>{item.supplier}</td>
-                  <td style={{ color: "#f5a623", fontSize: "0.75rem", fontWeight: 500 }}>👤 {item.createdBy || '—'}</td>
-                  <td style={{ color: "#a5a5b5" }}>{item.quantity ? item.quantity : "—"}</td>
-                  <td>{formatPLN(item.offerPrice)}</td>
-                  <td style={{ color: "#a5a5b5" }}>{item.currency !== "PLN" ? `${item.purchaseCost} ${item.currency}` : formatPLN(item.purchaseCost)}</td>
-                  <td style={{ color: "#f5a623" }}>{formatPLN(item.income)}</td>
-                  <td style={{ color: item.profit > 0 ? "#4ecb71" : "#e05555", fontWeight: 500 }}>{formatPLN(item.profit)}</td>
-                  <td style={{ color: item.margin > 0 ? "#4ecb71" : "#e05555", fontWeight: 500 }}>{formatPct(item.margin)}</td>
-                  <td style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+                  <td style={{ textAlign: 'left', fontWeight: 500 }}>{item.name}</td>
+                  <td style={{ textAlign: 'left', color: "#6a6a82", cursor: 'pointer' }} onClick={() => handleEanClick(item.ean)} title="Kliknij, aby skopiować EAN">{item.ean}</td>
+                  <td style={{ textAlign: 'left', color: "#8a8a9e" }}>{item.supplier}</td>
+                  <td style={{ textAlign: 'left', color: "#f5a623", fontSize: "0.75rem", fontWeight: 500 }}>👤 {item.createdBy || '—'}</td>
+                  <td style={{ textAlign: 'right', color: "#a5a5b5" }}>{item.quantity ? item.quantity : "—"}</td>
+                  <td style={{ textAlign: 'right' }}>{formatPLN(item.offerPrice)}</td>
+                  <td style={{ textAlign: 'right', color: "#a5a5b5" }}>{item.currency !== "PLN" ? `${item.purchaseCost} ${item.currency}` : formatPLN(item.purchaseCost)}</td>
+                  <td style={{ textAlign: 'right', color: "#f5a623" }}>{formatPLN(item.income)}</td>
+                  <td style={{ textAlign: 'right', color: item.profit > 0 ? "#4ecb71" : "#e05555", fontWeight: 700 }}>{formatPLN(item.profit)}</td>
+                  <td style={{ textAlign: 'right', color: item.margin > 0 ? "#4ecb71" : "#e05555", fontWeight: 700 }}>{formatPct(item.margin)}</td>
+                  <td style={{ textAlign: 'right' }}>
                     <button onClick={() => handleEditItem(item)} style={{ background: "transparent", border: "none", color: "#f5a623", cursor: "pointer", fontSize: "0.85rem" }}>✎</button>
                     <button onClick={() => handleRemoveFromList(item.id)} style={{ background: "transparent", border: "none", color: "#4a4a5e", cursor: "pointer", fontSize: "0.85rem" }}>✕</button>
                   </td>
@@ -64,12 +74,13 @@ export default function ResultsTable({
               ))}
             </tbody>
           </table>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+          {/* Przeniesiony i ostylowany przycisk zapisu */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #1e1e26' }}>
             <button
               onClick={onSaveWholeOffer}
               style={{
-                background: 'linear-gradient(135deg, #4ecb71 0%, #28a745 100%)',
-                color: '#fff',
+                background: 'linear-gradient(135deg, #4ecb71, #2a9d47)',
+                color: '#0d0d11',
                 border: 'none',
                 borderRadius: '8px',
                 padding: '0.85rem 1.25rem',
@@ -79,7 +90,7 @@ export default function ResultsTable({
                 boxShadow: '0 6px 18px rgba(40, 167, 69, 0.2)'
               }}
             >
-              ☁️ Zapisz całą ofertę w chmurze
+              ☁️ ZAPISZ ZESTAWIENIE
             </button>
           </div>
         </div>
