@@ -13,19 +13,24 @@ export default async function handler(req, res) {
     const { method } = req;
     const { id } = req.query;
 
-    // GET /api/calculations — pobierz wszystkie wyceny dla użytkownika
+    // GET /api/calculations — pobierz wszystkie wyceny (wspólny worek dla wszystkich)
     if (method === 'GET') {
       const calculations = await kv.get('calculations') || [];
       return res.status(200).json({ success: true, data: calculations });
     }
 
-    // POST /api/calculations — zapisz nową wycenę
+    // POST /api/calculations — zapisz nową wycenę z informacją o autorze
     if (method === 'POST') {
-      const { calculation } = req.body;
+      const { calculation, createdBy } = req.body;
       if (!calculation) return res.status(400).json({ success: false, error: 'Brak danych wyceny' });
 
       const calculations = await kv.get('calculations') || [];
-      const newCalc = { ...calculation, id: Date.now(), createdAt: new Date().toISOString() };
+      const newCalc = { 
+        ...calculation, 
+        id: Date.now(), 
+        createdBy: createdBy || 'Anonim', // Zapisujemy nazwę zalogowanego profilu
+        createdAt: new Date().toISOString() 
+      };
       calculations.push(newCalc);
       await kv.set('calculations', calculations, { ex: 365 * 24 * 60 * 60 }); // TTL 1 rok
       
