@@ -82,6 +82,12 @@ export default function KalkulatorAllegro() {
 
   // Edge Config
   const [edgeConfig, setEdgeConfig] = useState({ smartThreshold: 44.99, isScraperActive: true });
+  
+  // Vercel KV - cloud calculations
+  const [cloudCalculations, setCloudCalculations] = useState([]);
+  const [cloudLoading, setCloudLoading] = useState(false);
+  const [useCloudStorage, setUseCloudStorage] = useState(false);
+  const [showCloudPanel, setShowCloudPanel] = useState(false);
 
   // Funkcja komunikująca się z Twoim serwerem /api/scrape.js
   const handleFindCheapestOffer = async () => {
@@ -253,9 +259,15 @@ export default function KalkulatorAllegro() {
 
     if (editingId) {
       setSavedCalculations(prev => prev.map(item => item.id === editingId ? newItem : item));
+      if (useCloudStorage) {
+        updateCloudCalculation(editingId, newItem);
+      }
       setEditingId(null);
     } else {
       setSavedCalculations(prev => [newItem, ...prev]);
+      if (useCloudStorage) {
+        saveCalculationToCloud(newItem);
+      }
     }
     setProdName("");
     setProdEan("");
@@ -267,6 +279,9 @@ export default function KalkulatorAllegro() {
 
   const handleRemoveFromList = (id) => {
     setSavedCalculations(prev => prev.filter(item => item.id !== id));
+    if (useCloudStorage) {
+      deleteCloudCalculation(id);
+    }
     if (editingId === id) handleCancelEdit();
   };
 
@@ -333,6 +348,68 @@ export default function KalkulatorAllegro() {
     setStoredPin(newHash);
     handleCloseChangePin();
     alert('PIN został zmieniony');
+  };
+
+  // Vercel KV Cloud Storage functions
+  const fetchCloudCalculations = async () => {
+    setCloudLoading(true);
+    try {
+      const res = await fetch('/api/calculations');
+      const json = await res.json();
+      if (json.success) {
+        setCloudCalculations(json.data);
+      }
+    } catch (err) {
+      console.error('Błąd pobierania wycen z chmury:', err);
+    } finally {
+      setCloudLoading(false);
+    }
+  };
+
+  const saveCalculationToCloud = async (calculation) => {
+    try {
+      const res = await fetch('/api/calculations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ calculation })
+      });
+      const json = await res.json();
+      if (json.success) {
+        setCloudCalculations(prev => [json.data, ...prev]);
+        return json.data;
+      }
+    } catch (err) {
+      console.error('Błąd zapisywania wyceny:', err);
+    }
+  };
+
+  const updateCloudCalculation = async (id, updates) => {
+    try {
+      const res = await fetch(`/api/calculations?id=${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ calculation: updates })
+      });
+      const json = await res.json();
+      if (json.success) {
+        setCloudCalculations(prev => prev.map(c => c.id === id ? json.data : c));
+        return json.data;
+      }
+    } catch (err) {
+      console.error('Błąd aktualizacji wyceny:', err);
+    }
+  };
+
+  const deleteCloudCalculation = async (id) => {
+    try {
+      const res = await fetch(`/api/calculations?id=${id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (json.success) {
+        setCloudCalculations(prev => prev.filter(c => c.id !== id));
+      }
+    } catch (err) {
+      console.error('Błąd usuwania wyceny:', err);
+    }
   };
 
   const handleExportToExcel = () => {
@@ -498,6 +575,7 @@ export default function KalkulatorAllegro() {
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button onClick={handleLock} title="Zablokuj aplikację" style={{ background: '#22222e', border: 'none', color: '#f5a623', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer', fontFamily: 'inherit' }}>🔒</button>
             <button onClick={handleOpenChangePin} title="Zmień PIN" style={{ background: '#22222e', border: '1px solid #2d2d3d', color: '#8a8a9e', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer', fontFamily: 'inherit' }}>⚙️</button>
+            <button onClick={() => { setShowCloudPanel(!showCloudPanel); if (!showCloudPanel) fetchCloudCalculations(); }} title="Panel wycen w chmurze" style={{ background: '#22222e', border: '1px solid #2d2d3d', color: '#8a8a9e', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer', fontFamily: 'inherit' }}>☁️</button>
           </div>
         </div>
         <p style={{ color: "#4a4a5e", fontSize: "0.7rem", margin: "0.2rem 0 0 0", letterSpacing: "0.08em" }}>
@@ -519,6 +597,57 @@ export default function KalkulatorAllegro() {
               <button onClick={handleApplyChangePin} style={{ flex: 1, background: 'linear-gradient(135deg,#4ecb71,#2a9d47)', border: 'none', padding: '0.6rem', borderRadius: 6, color: '#0d0d11', fontWeight: 700 }}>Zmień PIN</button>
               <button onClick={handleCloseChangePin} style={{ background: '#22222e', border: '1px solid #2d2d3d', padding: '0.6rem', borderRadius: 6, color: '#8a8a9e' }}>Anuluj</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showCloudPanel && (
+        <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', zIndex: 1000 }}>
+          <div style={{ width: '90vw', maxWidth: 900, maxHeight: '80vh', background: '#121218', border: '1px solid #1e1e26', borderRadius: 12, padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, color: '#f5a623' }}>☁️ Wyceny w chmurze (Vercel KV)</h3>
+              <button onClick={() => setShowCloudPanel(false)} style={{ background: 'transparent', border: 'none', color: '#8a8a9e', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#8a8a9e', cursor: 'pointer' }}>
+                <input type="checkbox" checked={useCloudStorage} onChange={e => setUseCloudStorage(e.target.checked)} />
+                Synchronizuj lokalne wyceny do chmury przy zapisie
+              </label>
+            </div>
+
+            {cloudLoading ? (
+              <div style={{ textAlign: 'center', color: '#6a6a82' }}>⟳ Ładowanie wycen...</div>
+            ) : cloudCalculations.length === 0 ? (
+              <div style={{ textAlign: 'center', color: '#4a4a5e' }}>Brak wycen w chmurze. Włącz synchronizację powyżej i zapisz wycenę.</div>
+            ) : (
+              <div style={{ overflowY: 'auto', flex: 1 }}>
+                {cloudCalculations.map(calc => (
+                  <div key={calc.id} style={{ background: '#1e1e26', border: '1px solid #2d2d3d', borderRadius: 8, padding: '1rem', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ color: '#e8e4d9', fontWeight: 500 }}>{calc.name}</div>
+                        <div style={{ color: '#8a8a9e', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                          EAN: {calc.ean} | Ilość: {calc.quantity} | Cena: {formatPLN(calc.offerPrice)}
+                        </div>
+                        <div style={{ color: calc.profit > 0 ? '#4ecb71' : '#e05555', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                          Zysk: {formatPLN(calc.profit)} | Marża: {formatPct(calc.margin)}
+                        </div>
+                        <div style={{ color: '#6a6a82', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                          {calc.createdAt ? new Date(calc.createdAt).toLocaleString('pl-PL') : 'Brak daty'}
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => deleteCloudCalculation(calc.id)} 
+                        style={{ background: 'transparent', border: 'none', color: '#e05555', cursor: 'pointer', fontSize: '1.2rem' }}
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
