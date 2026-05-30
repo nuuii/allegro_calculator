@@ -73,6 +73,7 @@ function AppContent() {
   const [offerPendingDeleteId, setOfferPendingDeleteId] = useState(null);
   const [isSavingOffer, setIsSavingOffer] = useState(false);
   const [newlySavedOfferId, setNewlySavedOfferId] = useState(null);
+  const [editingOfferId, setEditingOfferId] = useState(null);
   const [eanLoading, setEanLoading] = useState(false);
   const saveOfferInFlightRef = useRef(false);
 
@@ -173,6 +174,12 @@ function AppContent() {
     setShowSaveOfferModal(true);
   };
 
+  const resetOfferDraft = () => {
+    calc.handleResetSavedCalculations();
+    setEditingOfferId(null);
+    localStorage.removeItem('calcallegro_saved_calculations');
+  };
+
   const handleSaveWholeOffer = async (offerName) => {
     if (isSavingOffer || saveOfferInFlightRef.current) return;
     if (calc.savedCalculations.length === 0) {
@@ -182,7 +189,7 @@ function AppContent() {
     if (offerName && offerName.trim()) {
       saveOfferInFlightRef.current = true;
       const newOfferSet = {
-        id: Date.now(),
+        id: editingOfferId || Date.now(),
         name: offerName.trim(),
         createdAt: new Date().toISOString(),
         createdBy: activeProfile?.name || 'Anonim',
@@ -193,6 +200,7 @@ function AppContent() {
         setIsSavingOffer(true);
         // Wysyłamy do chmury (przekazujemy oczekiwane pola)
         const payload = {
+          id: newOfferSet.id,
           offerName: newOfferSet.name,
           items: newOfferSet.items,
           createdBy: newOfferSet.createdBy,
@@ -216,11 +224,14 @@ function AppContent() {
         const saved = normalizeOfferSet(resJson.data || newOfferSet);
 
         // Natychmiast czyścimy lokalny bufor po potwierdzonym sukcesie zapisu.
-        calc.handleResetSavedCalculations();
-        localStorage.removeItem('calcallegro_saved_calculations');
+        resetOfferDraft();
 
-        // Dodajemy do lokalnej listy (użyj odpowiedzi z serwera jeśli jest)
-        setSavedOffers(prev => [saved, ...prev]);
+        if (editingOfferId) {
+          setSavedOffers(prev => prev.map(offer => Number(offer.id) === Number(editingOfferId) ? saved : offer));
+          setEditingOfferId(null);
+        } else {
+          setSavedOffers(prev => [saved, ...prev]);
+        }
         setNewlySavedOfferId(saved.id);
         setShowSaveOfferModal(false);
 
@@ -241,6 +252,7 @@ function AppContent() {
     if (calc.handleLoadSavedCalculations) {
       calc.handleLoadSavedCalculations(offerSet.items || []);
     }
+    setEditingOfferId(offerSet.id);
     setToast({ message: `Wczytano zestawienie "${offerSet.name}".`, type: 'success', visible: true });
     navigate('/');
     return true;
@@ -263,7 +275,8 @@ function AppContent() {
     try {
       const res = await fetch(`/api/calculations?id=${encodeURIComponent(offerSetId)}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Błąd przy usuwaniu');
-      setSavedOffers(prev => prev.filter(set => set.id !== offerSetId));
+      setSavedOffers(prev => prev.filter(set => Number(set.id) !== Number(offerSetId)));
+      if (Number(editingOfferId) === Number(offerSetId)) setEditingOfferId(null);
       setOfferPendingDeleteId(null);
       setToast({ message: "Zestawienie zostało usunięte.", type: 'info', visible: true });
     } catch (err) {

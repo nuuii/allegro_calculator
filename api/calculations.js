@@ -40,22 +40,31 @@ export default async function handler(req, res) {
     // POST: Zapisz nową całą ofertę (zbiorczą tabelę)
     if (method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-      const { offerName, items, createdBy } = body || {};
+      const { id: incomingId, offerName, items, createdBy } = body || {};
       if (!Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ success: false, error: 'Tabela produktów jest pusta.' });
       }
 
       const offers = await kv.get('saved_offers') || [];
+      const normalizedIncomingId = incomingId !== undefined && incomingId !== null ? Number(incomingId) : null;
+      const existingIndex = normalizedIncomingId !== null
+        ? offers.findIndex(offer => Number(offer.id) === normalizedIncomingId)
+        : -1;
       const newOffer = {
-        id: Date.now(),
+        id: normalizedIncomingId || Date.now(),
         name: offerName?.trim() || `Oferta ${offers.length + 1}`,
         offerName: offerName?.trim() || `Oferta ${offers.length + 1}`,
         items,
         createdBy: createdBy || 'Anonim',
-        createdAt: new Date().toISOString()
+        createdAt: existingIndex >= 0 ? offers[existingIndex].createdAt : new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
-      offers.unshift(newOffer);
+      if (existingIndex >= 0) {
+        offers[existingIndex] = { ...offers[existingIndex], ...newOffer };
+      } else {
+        offers.unshift(newOffer);
+      }
       await kv.set('saved_offers', offers);
 
       return res.status(201).json({ success: true, data: newOffer });
