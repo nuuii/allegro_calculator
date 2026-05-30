@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { ProfileAuthScreen, ChangePinModal, ProfileManagementModal } from "./components/AuthModals";
 import CalculatorPage from "./pages/CalculatorPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
@@ -380,7 +381,7 @@ export default function App() {
     setChangeNewPin('');
     setChangeConfirmPin('');
 
-    setToast({ message: 'PIN został pomyślnie zmieniony', type: 'success', visible: true });
+    setToast({ message: 'PIN zosta�� pomyślnie zmieniony', type: 'success', visible: true });
     setTimeout(() => setToast(t => ({ ...t, visible: false })), 2500);
   };
 
@@ -795,6 +796,7 @@ export default function App() {
         )}
 
         <Toast />
+        <SpeedInsights />
 
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800&display=swap');
