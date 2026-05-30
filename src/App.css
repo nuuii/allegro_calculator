@@ -1,4 +1,28 @@
 /* === WORKSPACE GRID LAYOUT === */
+.lazy-fallback {
+  width: 100%;
+  max-width: 1140px;
+  margin: 0 auto;
+  background: #121218;
+  border: 1px solid #1e1e26;
+  border-radius: 12px;
+  box-sizing: border-box;
+  color: #6a6a82;
+  font-size: 0.82rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.lazy-fallback--compact {
+  position: fixed;
+  left: 50%;
+  top: 1rem;
+  z-index: 1600;
+  max-width: 240px;
+  padding: 0.75rem 1rem;
+  transform: translateX(-50%);
+}
+
 .calculator-page {
   width: 100%;
   max-width: 1140px;

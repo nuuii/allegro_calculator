@@ -1,14 +1,23 @@
-import { useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
-import { ProfileAuthScreen, ChangePinModal, ProfileManagementModal } from "./components/AuthModals";
-import CalculatorPage from "./pages/CalculatorPage";
-import AnalyticsPage from "./pages/AnalyticsPage";
-import SavedOffersPage from "./pages/SavedOffersPage";
-import SettingsPage from "./pages/SettingsPage";
 import { useAuth } from './AuthContext.jsx';
 import { useApp } from './AppContext.jsx';
 import { useCalculator } from './useCalculator.js';
 import './App.css';
+
+const CalculatorPage = lazy(() => import("./pages/CalculatorPage"));
+const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
+const SavedOffersPage = lazy(() => import("./pages/SavedOffersPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const ProfileAuthScreen = lazy(() =>
+  import("./components/AuthModals").then(module => ({ default: module.ProfileAuthScreen }))
+);
+const ChangePinModal = lazy(() =>
+  import("./components/AuthModals").then(module => ({ default: module.ChangePinModal }))
+);
+const ProfileManagementModal = lazy(() =>
+  import("./components/AuthModals").then(module => ({ default: module.ProfileManagementModal }))
+);
 
 const CURRENCIES = [
   { code: "PLN", symbol: "zł", flag: "🇵🇱" }, { code: "EUR", symbol: "€", flag: "🇪🇺" },
@@ -35,6 +44,14 @@ const normalizeOfferSet = (offerSet) => ({
   offerName: offerSet.offerName || offerSet.name || 'Zestawienie bez nazwy',
   items: Array.isArray(offerSet.items) ? offerSet.items : [],
 });
+
+function LazyFallback({ compact = false }) {
+  return (
+    <div className={compact ? "lazy-fallback lazy-fallback--compact" : "lazy-fallback"}>
+      Ładowanie...
+    </div>
+  );
+}
 
 function AppContent() {
   const { rates, ratesLoading, edgeConfig, fetchRatesData, toast, setToast } = useApp();
@@ -277,49 +294,53 @@ function AppContent() {
         </div>
       )}
 
-      <Routes>
-        <Route path="/" element={
-          <CalculatorPage
-            prodName={calc.prodName} setProdName={calc.setProdName}
-            prodEan={calc.prodEan} setProdEan={calc.setProdEan}
-            offerPrice={calc.offerPrice} setOfferPrice={calc.setOfferPrice}
-            purchaseCost={calc.purchaseCost} setPurchaseCost={calc.setPurchaseCost}
-            quantity={calc.quantity} setQuantity={calc.setQuantity}
-            allegroDiscounted={calc.allegroDiscounted} setAllegroDiscounted={calc.setAllegroDiscounted}
-            supplierName={calc.supplierName} setSupplierName={calc.setSupplierName}
-            purchaseCurrency={calc.purchaseCurrency} setPurchaseCurrency={calc.setPurchaseCurrency}
-            allegro={calc.allegro} setAllegro={calc.setAllegro}
-            vat={calc.vat} setVat={calc.setVat}
-            includeDelivery={calc.includeDelivery} setIncludeDelivery={calc.setIncludeDelivery}
-            ratesLoading={ratesLoading} currentRate={calc.currentRate} eanLoading={eanLoading} edgeConfig={edgeConfig} result={calc.result}
-            isPositive={calc.result?.profit > 0} isNegative={calc.result?.profit < 0} editingId={calc.editingId} savedCalculations={calc.savedCalculations}
-            handleFindCheapestOffer={handleFindCheapestOffer} handleEditItem={calc.handleEditItem} handleCancelEdit={calc.handleCancelEdit}
-            handleAddToList={calc.handleAddToList} handleRemoveFromList={calc.handleRemoveFromList} 
-            handleExportToExcel={() => handleExportToExcel(calc.savedCalculations)}
-            onSaveWholeOffer={openSaveWholeOfferModal}
-            currencies={CURRENCIES} vatOptions={VAT_OPTIONS} formatPLN={formatPLN} formatPct={formatPct}
-          />
-        } />
-        <Route path="/saved" element={
-          <SavedOffersPage
-            savedOffers={savedOffers}
-            onLoad={handleLoadOfferSet}
-            onDelete={requestDeleteOfferSet}
-            onExport={(set) => handleExportToExcel(set.items)}
-            formatPLN={formatPLN}
-            newlySavedOfferId={newlySavedOfferId}
-            hasDraftCalculations={calc.savedCalculations.length > 0}
-          />
-        } />
-        <Route path="/analityka" element={<AnalyticsPage />} />
-        <Route path="/ustawienia" element={
-          <SettingsPage
-            profiles={profiles} activeProfile={activeProfile} edgeConfig={edgeConfig} onLogout={logout}
-          />} />
-      </Routes>
+      <Suspense fallback={<LazyFallback />}>
+        <Routes>
+          <Route path="/" element={
+            <CalculatorPage
+              prodName={calc.prodName} setProdName={calc.setProdName}
+              prodEan={calc.prodEan} setProdEan={calc.setProdEan}
+              offerPrice={calc.offerPrice} setOfferPrice={calc.setOfferPrice}
+              purchaseCost={calc.purchaseCost} setPurchaseCost={calc.setPurchaseCost}
+              quantity={calc.quantity} setQuantity={calc.setQuantity}
+              allegroDiscounted={calc.allegroDiscounted} setAllegroDiscounted={calc.setAllegroDiscounted}
+              supplierName={calc.supplierName} setSupplierName={calc.setSupplierName}
+              purchaseCurrency={calc.purchaseCurrency} setPurchaseCurrency={calc.setPurchaseCurrency}
+              allegro={calc.allegro} setAllegro={calc.setAllegro}
+              vat={calc.vat} setVat={calc.setVat}
+              includeDelivery={calc.includeDelivery} setIncludeDelivery={calc.setIncludeDelivery}
+              ratesLoading={ratesLoading} currentRate={calc.currentRate} eanLoading={eanLoading} edgeConfig={edgeConfig} result={calc.result}
+              isPositive={calc.result?.profit > 0} isNegative={calc.result?.profit < 0} editingId={calc.editingId} savedCalculations={calc.savedCalculations}
+              handleFindCheapestOffer={handleFindCheapestOffer} handleEditItem={calc.handleEditItem} handleCancelEdit={calc.handleCancelEdit}
+              handleAddToList={calc.handleAddToList} handleRemoveFromList={calc.handleRemoveFromList} 
+              handleExportToExcel={() => handleExportToExcel(calc.savedCalculations)}
+              onSaveWholeOffer={openSaveWholeOfferModal}
+              currencies={CURRENCIES} vatOptions={VAT_OPTIONS} formatPLN={formatPLN} formatPct={formatPct}
+            />
+          } />
+          <Route path="/saved" element={
+            <SavedOffersPage
+              savedOffers={savedOffers}
+              onLoad={handleLoadOfferSet}
+              onDelete={requestDeleteOfferSet}
+              onExport={(set) => handleExportToExcel(set.items)}
+              formatPLN={formatPLN}
+              newlySavedOfferId={newlySavedOfferId}
+              hasDraftCalculations={calc.savedCalculations.length > 0}
+            />
+          } />
+          <Route path="/analityka" element={<AnalyticsPage />} />
+          <Route path="/ustawienia" element={
+            <SettingsPage
+              profiles={profiles} activeProfile={activeProfile} edgeConfig={edgeConfig} onLogout={logout}
+            />} />
+        </Routes>
+      </Suspense>
 
-      {showChangePinModal && <ChangePinModal onClose={() => setShowChangePinModal(false)} />}
-      {showProfileModal && <ProfileManagementModal onClose={() => setShowProfileModal(false)} />}
+      <Suspense fallback={<LazyFallback compact />}>
+        {showChangePinModal && <ChangePinModal onClose={() => setShowChangePinModal(false)} />}
+        {showProfileModal && <ProfileManagementModal onClose={() => setShowProfileModal(false)} />}
+      </Suspense>
       {showSaveOfferModal && (
         <SaveOfferModal
           items={calc.savedCalculations}
@@ -461,7 +482,11 @@ export default function App() {
   const { isUnlocked } = useAuth();
 
   if (!isUnlocked) {
-    return <ProfileAuthScreen />;
+    return (
+      <Suspense fallback={<LazyFallback />}>
+        <ProfileAuthScreen />
+      </Suspense>
+    );
   }
 
   return (

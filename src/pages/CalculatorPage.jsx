@@ -329,6 +329,7 @@ export default function CalculatorPage({
                   }}
                 >
                   {editingId ? "✓ AKTUALIZUJ WYCENĘ" : "＋ DODAJ DO ZESTAWIENIA"}
+
                 </button>
                 {editingId && (
                   <button 
