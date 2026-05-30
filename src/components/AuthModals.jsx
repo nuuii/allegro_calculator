@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import { useAuth } from "./AuthContext";
 
 export function ProfileAuthScreen({
   profileAuthMode,
@@ -19,6 +20,7 @@ export function ProfileAuthScreen({
   setAccessKey,
   handleCreateProfile
 }) {
+  // TODO: This component can also be refactored to use useAuth hook internally.
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0d11', color: '#e8e4d9', padding: '1.5rem' }}>
       <div style={{ width: 520, maxWidth: '96%', background: '#121218', border: '1px solid #1e1e26', borderRadius: 12, padding: '1.5rem' }}>
@@ -154,44 +156,49 @@ export function ProfileAuthScreen({
   );
 }
 
-export function ChangePinModal({
-  changeCurrentPin,
-  setChangeCurrentPin,
-  changeNewPin,
-  setChangeNewPin,
-  changeConfirmPin,
-  setChangeConfirmPin,
-  handleApplyChangePin,
-  handleCloseChangePin
-}) {
+export function ChangePinModal({ onClose }) {
+  const [currentPin, setCurrentPin] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const { handleApplyChangePin } = useAuth();
+
+  const handleSubmit = async () => {
+    const success = await handleApplyChangePin(currentPin, newPin, confirmPin);
+    if (success) {
+      onClose();
+    }
+  };
+
   return (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', zIndex: 1200 }}>
       <div style={{ width: 480, maxWidth: '96%', background: '#121218', border: '1px solid #1e1e26', borderRadius: 12, padding: '1rem' }}>
         <h3 style={{ margin: 0, color: '#f5a623' }}>Zmień PIN</h3>
         <p style={{ color: '#6a6a82', marginTop: '0.35rem' }}>Podaj obecny PIN, a następnie nowy PIN (min. 4 cyfry).</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.6rem' }}>
-          <input type="password" inputMode="numeric" placeholder="Bieżący PIN" value={changeCurrentPin} onChange={e => setChangeCurrentPin(e.target.value.replace(/[^0-9]/g, ''))} style={{ padding: '0.5rem', borderRadius: 6, background: '#1e1e28', border: '1px solid #2d2d3d', color: '#e8e4d9' }} />
-          <input type="password" inputMode="numeric" placeholder="Nowy PIN" value={changeNewPin} onChange={e => setChangeNewPin(e.target.value.replace(/[^0-9]/g, ''))} style={{ padding: '0.5rem', borderRadius: 6, background: '#1e1e28', border: '1px solid #2d2d3d', color: '#e8e4d9' }} />
-          <input type="password" inputMode="numeric" placeholder="Powtórz nowy PIN" value={changeConfirmPin} onChange={e => setChangeConfirmPin(e.target.value.replace(/[^0-9]/g, ''))} style={{ padding: '0.5rem', borderRadius: 6, background: '#1e1e28', border: '1px solid #2d2d3d', color: '#e8e4d9' }} />
+          <input type="password" inputMode="numeric" placeholder="Bieżący PIN" value={currentPin} onChange={e => setCurrentPin(e.target.value.replace(/[^0-9]/g, ''))} style={{ padding: '0.5rem', borderRadius: 6, background: '#1e1e28', border: '1px solid #2d2d3d', color: '#e8e4d9' }} />
+          <input type="password" inputMode="numeric" placeholder="Nowy PIN" value={newPin} onChange={e => setNewPin(e.target.value.replace(/[^0-9]/g, ''))} style={{ padding: '0.5rem', borderRadius: 6, background: '#1e1e28', border: '1px solid #2d2d3d', color: '#e8e4d9' }} />
+          <input type="password" inputMode="numeric" placeholder="Powtórz nowy PIN" value={confirmPin} onChange={e => setConfirmPin(e.target.value.replace(/[^0-9]/g, ''))} style={{ padding: '0.5rem', borderRadius: 6, background: '#1e1e28', border: '1px solid #2d2d3d', color: '#e8e4d9' }} />
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-          <button onClick={handleApplyChangePin} style={{ flex: 1, background: 'linear-gradient(135deg,#4ecb71,#2a9d47)', border: 'none', padding: '0.6rem', borderRadius: 6, color: '#0d0d11', fontWeight: 700 }}>Zmień PIN</button>
-          <button onClick={handleCloseChangePin} style={{ background: '#22222e', border: '1px solid #2d2d3d', padding: '0.6rem', borderRadius: 6, color: '#8a8a9e' }}>Anuluj</button>
+          <button onClick={handleSubmit} style={{ flex: 1, background: 'linear-gradient(135deg,#4ecb71,#2a9d47)', border: 'none', padding: '0.6rem', borderRadius: 6, color: '#0d0d11', fontWeight: 700 }}>Zmień PIN</button>
+          <button onClick={onClose} style={{ background: '#22222e', border: '1px solid #2d2d3d', padding: '0.6rem', borderRadius: 6, color: '#8a8a9e' }}>Anuluj</button>
         </div>
       </div>
     </div>
   );
 }
 
-export function ProfileManagementModal({
-  selectedProfileId,
-  setSelectedProfileId,
-  profiles,
-  profileSwitchPin,
-  setProfileSwitchPin,
-  handleSwitchProfile,
-  setShowProfileModal
-}) {
+export function ProfileManagementModal({ onClose }) {
+  const { profiles, selectedProfileId, setSelectedProfileId, handleSwitchProfile } = useAuth();
+  const [pin, setPin] = useState('');
+
+  const handleSubmit = async () => {
+    const success = await handleSwitchProfile(selectedProfileId, pin);
+    if (success) {
+      onClose();
+    }
+  };
+
   return (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', zIndex: 1100 }}>
       <div style={{ width: '90vw', maxWidth: 520, background: '#121218', border: '1px solid #1e1e26', borderRadius: 12, padding: '1.25rem' }}>
@@ -200,7 +207,7 @@ export function ProfileManagementModal({
             <h3 style={{ margin: 0, color: '#f5a623' }}>Profile</h3>
             <div style={{ color: '#6a6a82', fontSize: '0.8rem' }}>Wybierz profil i wpisz jego PIN, aby przełączyć konto.</div>
           </div>
-          <button onClick={() => { setShowProfileModal(false); setProfileSwitchPin(''); }} style={{ background: 'transparent', border: 'none', color: '#8a8a9e', fontSize: '1.2rem', cursor: 'pointer', marginLeft: 'auto' }}>✕</button>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#8a8a9e', fontSize: '1.2rem', cursor: 'pointer', marginLeft: 'auto' }}>✕</button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
           {profiles.length === 0 ? (
@@ -224,14 +231,14 @@ export function ProfileManagementModal({
                 <input
                   type="password"
                   inputMode="numeric"
-                  value={profileSwitchPin}
-                  onChange={e => setProfileSwitchPin(e.target.value.replace(/[^0-9]/g, ''))}
+                  value={pin}
+                  onChange={e => setPin(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="4-cyfrowy PIN"
                   style={{ width: '100%', background: '#1e1e28', border: '1px solid #2d2d3d', borderRadius: 6, color: '#e8e4d9', padding: '0.65rem' }}
                 />
               </div>
               <button
-                onClick={() => handleSwitchProfile(selectedProfileId, profileSwitchPin)}
+                onClick={handleSubmit}
                 style={{ width: '100%', background: 'linear-gradient(135deg, #4ecb71, #2a9d47)', border: 'none', borderRadius: 6, color: '#0d0d11', padding: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
               >
                 Przełącz profil
