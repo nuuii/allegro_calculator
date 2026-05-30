@@ -5,6 +5,7 @@ import CalculatorPage from "./pages/CalculatorPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import { useAuth } from './AuthContext.jsx';
 import { useApp } from './AppContext.jsx';
+import './App.css';
 
 // --- CONSTANTS & HELPERS ---
 const CURRENCIES = [
