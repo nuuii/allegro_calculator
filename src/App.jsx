@@ -29,6 +29,13 @@ const formatPct = (value) => {
   return (value * 100).toFixed(2).replace(".", ",") + " %";
 };
 
+const normalizeOfferSet = (offerSet) => ({
+  ...offerSet,
+  name: offerSet.name || offerSet.offerName || 'Zestawienie bez nazwy',
+  offerName: offerSet.offerName || offerSet.name || 'Zestawienie bez nazwy',
+  items: Array.isArray(offerSet.items) ? offerSet.items : [],
+});
+
 function AppContent() {
   const { rates, ratesLoading, edgeConfig, fetchRatesData, setToast } = useApp();
   const { profiles, activeProfile, logout } = useAuth();
@@ -39,7 +46,7 @@ function AppContent() {
 
   const [savedOffers, setSavedOffers] = useState(() => {
     const saved = localStorage.getItem('calcallegro_saved_offers');
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved).map(normalizeOfferSet) : [];
   });
 
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -56,7 +63,7 @@ function AppContent() {
         if (res.ok) {
           const json = await res.json();
           if (json.success && Array.isArray(json.data)) {
-            setSavedOffers(json.data);
+            setSavedOffers(json.data.map(normalizeOfferSet));
           }
         }
       } catch (err) {
@@ -170,7 +177,7 @@ function AppContent() {
         }
 
         const resJson = await response.json();
-        const saved = resJson.data || newOfferSet;
+        const saved = normalizeOfferSet(resJson.data || newOfferSet);
 
         // Dodajemy do lokalnej listy (użyj odpowiedzi z serwera jeśli jest)
         setSavedOffers(prev => [saved, ...prev]);
@@ -178,7 +185,7 @@ function AppContent() {
         // Czyścimy lokalna liste wycen w kalkulatorze
         calc.handleResetSavedCalculations();
 
-        setToast({ message: `Zestawienie "${offerName}" zostało pomyślnie zapisane w chmurze!`, type: 'success', visible: true });
+        setToast({ message: `Zestawienie "${saved.name}" zostało pomyślnie zapisane w chmurze!`, type: 'success', visible: true });
       } catch (error) {
         console.error('Błąd zapisu:', error);
         setToast({ message: `Błąd: ${error.message}`, type: 'error', visible: true });

@@ -1,5 +1,3 @@
-import React from "react";
-
 export function Field({ label, value, onChange, placeholder, note }) {
   return (
     <div style={{ marginBottom: "0.8rem" }}>
@@ -30,8 +28,8 @@ export function Field({ label, value, onChange, placeholder, note }) {
 }
 
 export function ResultRow({ label, value, negative, accent, dimmed }) {
-  const displayValue = negative && value && value !== "—" 
-    ? value.replace(/^−\s*/, "− ").startsWith("−") ? value : "− " + value
+  const displayValue = negative && value && value !== "—"
+    ? `− ${String(value).replace(/^[-−]\s*/, "")}`
     : value;
 
   return (

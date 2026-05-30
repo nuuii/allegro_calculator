@@ -1,4 +1,3 @@
-import React, { useCallback } from "react";
 import { Field, ResultRow } from "../components/Ui";
 import ResultsTable from "../ResultsTable.jsx";
 
@@ -13,25 +12,17 @@ export default function CalculatorPage({
 }) {
 
   return (
-    <div style={{ width: '100%', maxWidth: '1140px', margin: '0 auto' }}>
+    <div className="calculator-page">
       {/* === WORKSPACE GRID: Dwie kolumny === */}
       <div className="workspace-grid">
         
         {/* === LEWA KOLUMNA: FORMULARZ === */}
-        <div style={{ 
-          background: "#121218", 
-          borderRadius: "12px", 
-          padding: "1.25rem", 
-          border: "1px solid #1e1e26", 
-          display: "flex", 
-          flexDirection: "column", 
-          gap: "1rem"
-        }}>
+        <div className="input-panel">
           <div>
             <Field label="Dostawca / Hurtownia" value={supplierName} onChange={setSupplierName} placeholder="Nazwa dostawcy lub hurtowni" />
           </div>
 
-          <div style={{ height: "1px", background: "#1e1e26" }} />
+          <div className="panel-divider" />
 
           <div>
             <Field label="Kod EAN" value={prodEan} onChange={setProdEan} placeholder="np. 590123..." />
@@ -105,7 +96,7 @@ export default function CalculatorPage({
             </div>
           </div>
 
-          <div style={{ height: "1px", background: "#1e1e26" }} />
+          <div className="panel-divider" />
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
             <Field label="Cena oferty brutto" value={offerPrice} onChange={setOfferPrice} placeholder="np. 89,99" />
@@ -153,16 +144,7 @@ export default function CalculatorPage({
             </div>
           </div>
 
-          <div style={{ 
-            display: "flex", 
-            alignItems: "center", 
-            justifyContent: "space-between", 
-            flexWrap: "wrap", 
-            gap: "0.5rem", 
-            background: "#161622", 
-            padding: "0.5rem", 
-            borderRadius: "6px" 
-          }}>
+          <div className="currency-strip">
             <div style={{ display: "flex", gap: "0.25rem" }}>
               {currencies.map(c => (
                 <button 
@@ -196,63 +178,29 @@ export default function CalculatorPage({
           </div>
 
           {/* === SEKCJA OPCJI FINANSOWYCH: PROWIZJA, VAT, DOSTAWA === */}
-          <div style={{ 
-            display: "grid", 
-            gridTemplateColumns: "1.2fr 1fr 0.8fr", 
-            gap: "1rem", 
-            alignItems: "stretch",
-            width: "100%"
-          }}>
+          <div className="finance-options-grid">
             
             {/* === KAFELEK: PROWIZJA % === */}
-            <div style={{ 
-              background: "#161622", 
-              border: "1px solid #2d2d3d", 
-              borderRadius: "8px", 
-              padding: "0.75rem", 
-              display: "flex", 
-              flexDirection: "column", 
-              justifyContent: "space-between"
-            }}>
-              <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.6rem", fontWeight: 600 }}>PROWIZJA %</label>
+            <div className="finance-tile finance-tile--commission">
+              <label className="finance-tile__label">PROWIZJA %</label>
               
               {/* Input i przyciski szybkiego wyboru w jednej linii */}
-              <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", marginBottom: "0.6rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.2rem" }}>
+              <div className="commission-row">
+                <div className="commission-input-group">
                   <input 
                     type="text" 
                     value={allegro} 
                     onChange={e => setAllegro(e.target.value)} 
-                    style={{ 
-                      width: "50px", 
-                      background: "#1e1e28", 
-                      border: "1px solid #2d2d3d", 
-                      borderRadius: "6px", 
-                      color: "#f5a623", 
-                      fontSize: "0.95rem", 
-                      padding: "0.4rem", 
-                      textAlign: "center", 
-                      fontFamily: "inherit",
-                      boxSizing: "border-box"
-                    }} 
+                    className="commission-input"
                   />
-                  <span style={{ color: "#f5a623", fontWeight: 700, fontSize: "0.85rem" }}>%</span>
+                  <span className="commission-symbol">%</span>
                 </div>
-                <div style={{ display: "flex", gap: "0.3rem" }}>
+                <div className="commission-presets">
                   {[5, 10, 15].map(v => (
                     <button 
                       key={v} 
                       onClick={() => setAllegro(String(v))} 
-                      style={{ 
-                        background: "#22222e", 
-                        color: "#8a8a9e", 
-                        border: "none", 
-                        borderRadius: "5px", 
-                        fontSize: "0.7rem", 
-                        padding: "0.4rem 0.5rem", 
-                        cursor: "pointer",
-                        fontFamily: "inherit"
-                      }}
+                      className="preset-btn"
                     >
                       {v}%
                     </button>
@@ -264,50 +212,21 @@ export default function CalculatorPage({
               <button 
                 type="button" 
                 onClick={() => setAllegroDiscounted(v => !v)} 
-                style={{ 
-                  width: "100%", 
-                  background: allegroDiscounted ? "linear-gradient(135deg, #4ecb71, #2a9d47)" : "#22222e", 
-                  color: allegroDiscounted ? "#0d0d11" : "#8a8a9e", 
-                  border: "none", 
-                  borderRadius: "6px", 
-                  fontSize: "0.75rem", 
-                  padding: "0.5rem 0", 
-                  cursor: "pointer", 
-                  fontFamily: "inherit",
-                  fontWeight: 600
-                }}
+                className={`discount-btn ${allegroDiscounted ? "is-active" : ""}`}
               >
                 {allegroDiscounted ? "✓ 50% RABAT" : "Rabat 50%"}
               </button>
             </div>
 
             {/* === KAFELEK: VAT === */}
-            <div style={{ 
-              background: "#161622", 
-              border: "1px solid #2d2d3d", 
-              borderRadius: "8px", 
-              padding: "0.75rem", 
-              display: "flex", 
-              flexDirection: "column", 
-              justifyContent: "space-between"
-            }}>
-              <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.6rem", fontWeight: 600 }}>VAT</label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.35rem", flex: 1, alignContent: "center" }}>
+            <div className="finance-tile">
+              <label className="finance-tile__label">VAT</label>
+              <div className="vat-grid">
                 {vatOptions.map(v => (
                   <button 
                     key={v} 
                     onClick={() => setVat(v)} 
-                    style={{ 
-                      background: vat === v ? "linear-gradient(135deg, #f5a623, #f0623a)" : "#22222e", 
-                      color: vat === v ? "#0d0d11" : "#8a8a9e", 
-                      border: "none", 
-                      borderRadius: "5px", 
-                      padding: "0.5rem 0", 
-                      fontSize: "0.75rem", 
-                      fontWeight: 600, 
-                      cursor: "pointer",
-                      fontFamily: "inherit"
-                    }}
+                    className={`vat-btn ${vat === v ? "is-active" : ""}`}
                   >
                     {v}%
                   </button>
@@ -316,39 +235,15 @@ export default function CalculatorPage({
             </div>
 
             {/* === KAFELEK: DOSTAWA === */}
-            <div style={{ 
-              background: "#161622", 
-              border: "1px solid #2d2d3d", 
-              borderRadius: "8px", 
-              padding: "0.75rem", 
-              display: "flex", 
-              flexDirection: "column", 
-              justifyContent: "space-between"
-            }}>
-              <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.6rem", fontWeight: 600 }}>DOSTAWA</label>
+            <div className="finance-tile">
+              <label className="finance-tile__label">DOSTAWA</label>
               <button 
                 type="button" 
                 onClick={() => setIncludeDelivery(v => !v)} 
-                style={{ 
-                  width: "100%", 
-                  display: "flex", 
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  background: includeDelivery ? "#1a3a22" : "#1e1e28", 
-                  padding: "0.6rem 0.6rem", 
-                  borderRadius: "6px", 
-                  border: includeDelivery ? "1px solid #4ecb71" : "1px solid #2d2d3d", 
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  transition: "all 0.2s"
-                }}
+                className={`delivery-toggle ${includeDelivery ? "is-active" : ""}`}
               >
-                <span style={{ fontSize: "0.7rem", color: "#8a8a9e", fontWeight: 500 }}>2%</span>
-                <span style={{ 
-                  fontSize: "0.9rem", 
-                  color: includeDelivery ? "#4ecb71" : "#e05555", 
-                  fontWeight: 700
-                }}>
+                <span className="delivery-toggle__rate">2%</span>
+                <span className="delivery-toggle__state">
                   {includeDelivery ? "✓ ON" : "✕ OFF"}
                 </span>
               </button>
@@ -357,15 +252,7 @@ export default function CalculatorPage({
         </div>
 
         {/* === PRAWA KOLUMNA: WYNIKI FINANSOWE === */}
-        <div style={{ 
-          background: "#121218", 
-          borderRadius: "12px", 
-          padding: "1.25rem", 
-          border: result ? (isPositive ? "1px solid #1a3a22" : isNegative ? "1px solid #3a1a1a" : "1px solid #1e1e26") : "1px solid #1e1e26", 
-          display: "flex", 
-          flexDirection: "column", 
-          justifyContent: "space-between"
-        }}>
+        <div className={`result-panel ${result ? (isPositive ? "is-positive" : isNegative ? "is-negative" : "") : ""}`}>
           {!result ? (
             <div style={{ color: "#4a4a5e", fontSize: "0.85rem", textAlign: "center", margin: "auto 0" }}>
               Wprowadź cenę oferty po lewej stronie...

@@ -1,9 +1,12 @@
+/* global process */
 import { createClient } from '@vercel/kv';
 
-const kv = createClient({
-  url: process.env.KV_REST_API_URL,
-  token: process.env.KV_REST_API_TOKEN,
-});
+function getKvClient() {
+  return createClient({
+    url: process.env.KV_REST_API_URL,
+    token: process.env.KV_REST_API_TOKEN,
+  });
+}
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -20,22 +23,32 @@ export default async function handler(req, res) {
       return res.status(500).json({ success: false, error: 'Brak zmiennych KV w Vercel.' });
     }
 
+    const kv = getKvClient();
+
     // GET: Pobierz wszystkie zapisane oferty grupowe
     if (method === 'GET') {
       const offers = await kv.get('saved_offers') || [];
-      return res.status(200).json({ success: true, data: offers });
+      const normalizedOffers = offers.map((offer) => ({
+        ...offer,
+        name: offer.name || offer.offerName || 'Zestawienie bez nazwy',
+        offerName: offer.offerName || offer.name || 'Zestawienie bez nazwy',
+        items: Array.isArray(offer.items) ? offer.items : [],
+      }));
+      return res.status(200).json({ success: true, data: normalizedOffers });
     }
 
     // POST: Zapisz nową całą ofertę (zbiorczą tabelę)
     if (method === 'POST') {
-      const { offerName, items, createdBy } = req.body;
-      if (!items || items.length === 0) {
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      const { offerName, items, createdBy } = body || {};
+      if (!Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ success: false, error: 'Tabela produktów jest pusta.' });
       }
 
       const offers = await kv.get('saved_offers') || [];
       const newOffer = {
         id: Date.now(),
+        name: offerName?.trim() || `Oferta ${offers.length + 1}`,
         offerName: offerName?.trim() || `Oferta ${offers.length + 1}`,
         items,
         createdBy: createdBy || 'Anonim',
