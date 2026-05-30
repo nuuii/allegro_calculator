@@ -19,15 +19,16 @@ const CURRENCIES = [
 
 const VAT_OPTIONS = [5, 8, 23];
 
-function formatPLN(val) {
-  if (val === null || val === undefined || isNaN(val)) return "—";
-  return val.toFixed(2).replace(".", ",") + " zł";
-}
+// Helper functions that might be needed in CalculatorPage
+const formatPLN = (value) => {
+  if (typeof value !== 'number' || isNaN(value)) return '0,00 zł';
+  return `${value.toFixed(2).replace('.', ',')} zł`;
+};
 
-function formatPct(val) {
-  if (val === null || val === undefined || isNaN(val)) return "—";
-  return (val * 100).toFixed(2).replace(".", ",") + " %";
-}
+const formatPct = (value) => {
+  if (typeof value !== 'number' || isNaN(value)) return '0,00%';
+  return `${value.toFixed(2).replace('.', ',')}%`;
+};
 
 function AppContent() {
   const { rates, ratesLoading, edgeConfig, fetchRatesData, setToast } = useApp();
