@@ -68,17 +68,75 @@ export default function KalkulatorAllegro() {
   
   // Nowy stan dla ładowania zapytania do Apify
   const [eanLoading, setEanLoading] = useState(false);
-  // PIN auth (stored as SHA-256 hash)
-  const [storedPin, setStoredPin] = useState(() => localStorage.getItem("calcallegro_pin_hash") || null);
-  const [isSettingPin, setIsSettingPin] = useState(() => !localStorage.getItem("calcallegro_pin_hash"));
-  const [pinInput, setPinInput] = useState("");
-  const [pinConfirm, setPinConfirm] = useState("");
-  // If a PIN hash exists, require unlock on startup
-  const [isUnlocked, setIsUnlocked] = useState(() => !localStorage.getItem("calcallegro_pin_hash"));
+  const ACCESS_KEYS = [
+    'ac_7f9K2mX4pQzN9bW1vR8tY3cX6eJ5dL0a',
+    'ac_4bE9nV1wX7zM3qQ8rT2pY6cX5eL1kS0j',
+    'ac_9mK4pL2zX7wN1vR8tY3cX6eJ5dB0aS9f',
+    'ac_2zX7wN1vR8tY3cX6eJ5dL0aS9fM4pK2m',
+    'ac_8tY3cX6eJ5dL0aS9fM4pK2mX7wN1vR2p',
+    'ac_5dL0aS9fM4pK2mX7wN1vR8tY3cX6eJ1k',
+    'ac_1vR8tY3cX6eJ5dL0aS9fM4pK2mX7wN3q',
+    'ac_6eJ5dL0aS9fM4pK2mX7wN1vR8tY3cX7z',
+    'ac_3cX6eJ5dL0aS9fM4pK2mX7wN1vR8tY9b',
+    'ac_M4pK2mX7wN1vR8tY3cX6eJ5dL0aS9f1v',
+    'ac_X7wN1vR8tY3cX6eJ5dL0aS9fM4pK2m4b',
+    'ac_aS9fM4pK2mX7wN1vR8tY3cX6eJ5dL0a9m',
+    'ac_7zM3qQ8rT2pY6cX5eL1kS0j4bE9nV1w',
+    'ac_2pY6cX5eL1kS0j4bE9nV1wX7zM3qQ8r',
+    'ac_eL1kS0j4bE9nV1wX7zM3qQ8rT2pY6cX5',
+    'ac_V1wX7zM3qQ8rT2pY6cX5eL1kS0j4bE9n',
+    'ac_qQ8rT2pY6cX5eL1kS0j4bE9nV1wX7zM3',
+    'ac_S0j4bE9nV1wX7zM3qQ8rT2pY6cX5eL1k',
+    'ac_N9bW1vR8tY3cX6eJ5dL0a7f9K2mX4pQz',
+    'ac_3cX6eJ5dL0a7f9K2mX4pQzN9bW1vR8tY',
+    'ac_dL0a7f9K2mX4pQzN9bW1vR8tY3cX6eJ5',
+    'ac_X4pQzN9bW1vR8tY3cX6eJ5dL0a7f9K2m',
+    'ac_vR8tY3cX6eJ5dL0a7f9K2mX4pQzN9bW1',
+    'ac_K2mX4pQzN9bW1vR8tY3cX6eJ5dL0a7f9',
+    'ac_9bW1vR8tY3cX6eJ5dL0a7f9K2mX4pQz'
+  ];
+  const [profiles, setProfiles] = useState(() => {
+    const saved = localStorage.getItem('calcallegro_profiles');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [activeProfileId, setActiveProfileId] = useState(() => localStorage.getItem('calcallegro_active_profile_id') || '');
+  const [profileAuthMode, setProfileAuthMode] = useState(() => {
+    const saved = localStorage.getItem('calcallegro_profiles');
+    return saved && JSON.parse(saved).length ? 'login' : 'signup';
+  });
+  const [selectedProfileId, setSelectedProfileId] = useState(() => {
+    const saved = localStorage.getItem('calcallegro_active_profile_id');
+    if (saved) return saved;
+    const profilesSaved = localStorage.getItem('calcallegro_profiles');
+    const parsed = profilesSaved ? JSON.parse(profilesSaved) : [];
+    return parsed[0]?.id || '';
+  });
+  const [profileName, setProfileName] = useState('');
+  const [profilePin, setProfilePin] = useState('');
+  const [profilePinConfirm, setProfilePinConfirm] = useState('');
+  const [accessKey, setAccessKey] = useState('');
+  const [loginPin, setLoginPin] = useState('');
+  const [profileSwitchPin, setProfileSwitchPin] = useState('');
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [showChangePinModal, setShowChangePinModal] = useState(false);
-  const [changeCurrentPin, setChangeCurrentPin] = useState("");
-  const [changeNewPin, setChangeNewPin] = useState("");
-  const [changeConfirmPin, setChangeConfirmPin] = useState("");
+  const [changeCurrentPin, setChangeCurrentPin] = useState('');
+  const [changeNewPin, setChangeNewPin] = useState('');
+  const [changeConfirmPin, setChangeConfirmPin] = useState('');
+
+  const activeProfile = profiles.find(profile => profile.id === activeProfileId) || null;
+  const availableAccessKeys = ACCESS_KEYS.filter(key => !profiles.some(profile => profile.accessKey === key));
+
+  const saveProfiles = (nextProfiles) => {
+    setProfiles(nextProfiles);
+    localStorage.setItem('calcallegro_profiles', JSON.stringify(nextProfiles));
+  };
+
+  useEffect(() => {
+    if (activeProfileId) {
+      localStorage.setItem('calcallegro_active_profile_id', activeProfileId);
+    }
+  }, [activeProfileId]);
 
   // Edge Config
   const [edgeConfig, setEdgeConfig] = useState({ smartThreshold: 44.99, isScraperActive: true });
@@ -286,35 +344,73 @@ export default function KalkulatorAllegro() {
     if (editingId === id) handleCancelEdit();
   };
 
-  // PIN handlers
-  const handleSetPin = () => {
-    if (!pinInput || pinInput.length < 4) return alert('PIN musi mieć co najmniej 4 cyfry');
-    if (pinInput !== pinConfirm) return alert('PINy nie są zgodne');
-    // Hash PIN before storing
-    hashPin(pinInput).then(hash => {
-      localStorage.setItem('calcallegro_pin_hash', hash);
-      setStoredPin(hash);
-      setIsSettingPin(false);
-      setIsUnlocked(true);
-      setPinInput('');
-      setPinConfirm('');
-    });
+  // Profile auth handlers
+  const handleCreateProfile = async () => {
+    const name = profileName.trim();
+    const key = accessKey.trim();
+    if (!name) return alert('Podaj nazwę profilu');
+    if (!profilePin || profilePin.length < 4) return alert('PIN musi mieć co najmniej 4 cyfry');
+    if (profilePin !== profilePinConfirm) return alert('PINy nie są zgodne');
+    if (!ACCESS_KEYS.includes(key)) return alert('Nieprawidłowy klucz dostępu');
+    if (profiles.some(p => p.accessKey === key)) return alert('Ten klucz dostępu został już użyty');
+
+    const hash = await hashPin(profilePin);
+    const newProfile = {
+      id: Date.now().toString(),
+      name,
+      pinHash: hash,
+      accessKey: key,
+      createdAt: new Date().toISOString(),
+    };
+    const nextProfiles = [newProfile, ...profiles];
+    saveProfiles(nextProfiles);
+    setActiveProfileId(newProfile.id);
+    setSelectedProfileId(newProfile.id);
+    setIsUnlocked(true);
+    setProfileAuthMode('login');
+    setProfileName('');
+    setProfilePin('');
+    setProfilePinConfirm('');
+    setAccessKey('');
+    setToast({ message: `Profil ${name} został utworzony`, type: 'success', visible: true });
+    setTimeout(() => setToast(t => ({ ...t, visible: false })), 2500);
   };
 
-  const handleVerifyPin = () => {
-    if (!storedPin) return setIsSettingPin(true);
-    hashPin(pinInput).then(hash => {
-      if (hash === storedPin) {
-        setIsUnlocked(true);
-        setPinInput('');
-      } else {
-        alert('Nieprawidłowy PIN');
-      }
-    });
+  const handleLoginProfile = async () => {
+    const profile = profiles.find(p => p.id === selectedProfileId);
+    if (!profile) return alert('Wybierz profil');
+    if (!loginPin || loginPin.length < 4) return alert('Podaj PIN do profilu');
+
+    const hash = await hashPin(loginPin);
+    if (hash === profile.pinHash) {
+      setActiveProfileId(profile.id);
+      setIsUnlocked(true);
+      setLoginPin('');
+      setToast({ message: `Zalogowano jako ${profile.name}`, type: 'success', visible: true });
+      setTimeout(() => setToast(t => ({ ...t, visible: false })), 2500);
+    } else {
+      alert('Nieprawidłowy PIN');
+    }
   };
 
   const handleLock = () => {
     setIsUnlocked(false);
+  };
+
+  const handleSwitchProfile = async (profileId, pin) => {
+    const profile = profiles.find(p => p.id === profileId);
+    if (!profile) return alert('Wybierz profil');
+    if (!pin || pin.length < 4) return alert('Podaj PIN wybranego profilu');
+    const hash = await hashPin(pin);
+    if (hash === profile.pinHash) {
+      setActiveProfileId(profile.id);
+      setIsUnlocked(true);
+      setShowProfileModal(false);
+      setToast({ message: `Przełączono na profil ${profile.name}`, type: 'success', visible: true });
+      setTimeout(() => setToast(t => ({ ...t, visible: false })), 2500);
+    } else {
+      alert('Nieprawidłowy PIN profilu');
+    }
   };
 
   // Hashing helper using Web Crypto (SHA-256 -> hex)
@@ -342,13 +438,15 @@ export default function KalkulatorAllegro() {
     if (!changeCurrentPin || !changeNewPin) return alert('Wypełnij pola PIN');
     if (changeNewPin.length < 4) return alert('Nowy PIN musi mieć min. 4 cyfry');
     if (changeNewPin !== changeConfirmPin) return alert('Nowe PINy nie są zgodne');
+    if (!activeProfile) return alert('Brak aktywnego profilu');
     const currentHash = await hashPin(changeCurrentPin);
-    if (currentHash !== storedPin) return alert('Błędny bieżący PIN');
+    if (currentHash !== activeProfile.pinHash) return alert('Błędny bieżący PIN');
     const newHash = await hashPin(changeNewPin);
-    localStorage.setItem('calcallegro_pin_hash', newHash);
-    setStoredPin(newHash);
+    const nextProfiles = profiles.map(p => p.id === activeProfile.id ? { ...p, pinHash: newHash } : p);
+    saveProfiles(nextProfiles);
     handleCloseChangePin();
-    alert('PIN został zmieniony');
+    setToast({ message: 'PIN został zmieniony', type: 'success', visible: true });
+    setTimeout(() => setToast(t => ({ ...t, visible: false })), 2500);
   };
 
   // Vercel KV Cloud Storage functions
@@ -523,26 +621,136 @@ export default function KalkulatorAllegro() {
     XLSX.writeFile(workbook, `Kalkulacje_Allegro_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
-  // Jeśli aplikacja zablokowana — pokaż ekran PIN
+  // Jeśli aplikacja zablokowana — pokaż ekran logowania/profilu
   if (!isUnlocked) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0d11', color: '#e8e4d9', padding: '1.5rem' }}>
-        <div style={{ width: 440, maxWidth: '96%', background: '#121218', border: '1px solid #1e1e26', borderRadius: 12, padding: '1.25rem' }}>
-          <h2 style={{ margin: 0, fontSize: '1.1rem', color: '#f5a623' }}>{isSettingPin ? 'Ustaw PIN dostępu' : 'Wprowadź PIN'}</h2>
-          <p style={{ color: '#6a6a82', fontSize: '0.85rem' }}>{isSettingPin ? 'Ustaw 4-cyfrowy PIN, którego będziesz używać do otwierania aplikacji.' : 'Podaj PIN, aby odblokować aplikację.'}</p>
+        <div style={{ width: 520, maxWidth: '96%', background: '#121218', border: '1px solid #1e1e26', borderRadius: 12, padding: '1.5rem' }}>
+          <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#f5a623' }}>{profileAuthMode === 'signup' ? 'Utwórz profil' : 'Wybierz profil'}</h2>
+          <p style={{ color: '#6a6a82', fontSize: '0.9rem', marginTop: '0.5rem' }}>
+            {profiles.length === 0
+              ? 'Zacznij od utworzenia profilu. Potrzebny jest ważny klucz dostępu.'
+              : profileAuthMode === 'signup'
+                ? 'Utwórz nowy profil, podając nazwę, PIN i ważny klucz dostępu.'
+                : 'Wybierz profil i wprowadź PIN, aby odblokować aplikację.'}
+          </p>
 
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-            <input type="password" inputMode="numeric" value={pinInput} onChange={e => setPinInput(e.target.value.replace(/[^0-9]/g, ''))} placeholder="PIN" style={{ flex: 1, padding: '0.6rem', borderRadius: 6, background: '#1e1e28', border: '1px solid #2d2d3d', color: '#e8e4d9', fontFamily: 'inherit' }} />
-            {isSettingPin && <input type="password" inputMode="numeric" value={pinConfirm} onChange={e => setPinConfirm(e.target.value.replace(/[^0-9]/g, ''))} placeholder="Powtórz PIN" style={{ flex: 1, padding: '0.6rem', borderRadius: 6, background: '#1e1e28', border: '1px solid #2d2d3d', color: '#e8e4d9', fontFamily: 'inherit' }} />}
-          </div>
+          {profiles.length > 0 && (
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+              <button
+                onClick={() => setProfileAuthMode('login')}
+                style={{ flex: 1, background: profileAuthMode === 'login' ? '#f5a623' : '#22222e', border: 'none', color: profileAuthMode === 'login' ? '#0d0d11' : '#8a8a9e', borderRadius: 6, padding: '0.65rem', cursor: 'pointer' }}
+              >
+                Logowanie
+              </button>
+              <button
+                onClick={() => setProfileAuthMode('signup')}
+                style={{ flex: 1, background: profileAuthMode === 'signup' ? '#f5a623' : '#22222e', border: 'none', color: profileAuthMode === 'signup' ? '#0d0d11' : '#8a8a9e', borderRadius: 6, padding: '0.65rem', cursor: 'pointer' }}
+              >
+                Nowy profil
+              </button>
+            </div>
+          )}
 
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.9rem' }}>
-            {isSettingPin ? (
-              <button onClick={handleSetPin} style={{ flex: 1, background: 'linear-gradient(135deg, #4ecb71, #2a9d47)', border: 'none', padding: '0.6rem', borderRadius: 6, color: '#0d0d11', fontWeight: 700, cursor: 'pointer' }}>Ustaw PIN</button>
+          <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+            {profileAuthMode === 'login' && profiles.length > 0 ? (
+              <>
+                <label style={{ fontSize: '0.75rem', color: '#6a6a82' }}>Wybierz profil</label>
+                <select
+                  value={selectedProfileId}
+                  onChange={e => setSelectedProfileId(e.target.value)}
+                  style={{ width: '100%', background: '#1e1e28', border: '1px solid #2d2d3d', borderRadius: 6, color: '#e8e4d9', padding: '0.65rem' }}
+                >
+                  {profiles.map(profile => (
+                    <option key={profile.id} value={profile.id}>{profile.name}</option>
+                  ))}
+                </select>
+
+                <label style={{ fontSize: '0.75rem', color: '#6a6a82' }}>PIN</label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  value={loginPin}
+                  onChange={e => setLoginPin(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="4-cyfrowy PIN"
+                  style={{ width: '100%', background: '#1e1e28', border: '1px solid #2d2d3d', borderRadius: 6, color: '#e8e4d9', padding: '0.65rem' }}
+                />
+
+                <button
+                  onClick={handleLoginProfile}
+                  style={{ width: '100%', background: 'linear-gradient(135deg, #4ecb71, #2a9d47)', border: 'none', borderRadius: 6, color: '#0d0d11', padding: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Zaloguj się
+                </button>
+              </>
             ) : (
-              <button onClick={handleVerifyPin} style={{ flex: 1, background: 'linear-gradient(135deg, #4ecb71, #2a9d47)', border: 'none', padding: '0.6rem', borderRadius: 6, color: '#0d0d11', fontWeight: 700, cursor: 'pointer' }}>Odblokuj</button>
+              <>
+                <label style={{ fontSize: '0.75rem', color: '#6a6a82' }}>Nazwa profilu</label>
+                <input
+                  type="text"
+                  value={profileName}
+                  onChange={e => setProfileName(e.target.value)}
+                  placeholder="np. Kasia, Magda, Biznes"
+                  style={{ width: '100%', background: '#1e1e28', border: '1px solid #2d2d3d', borderRadius: 6, color: '#e8e4d9', padding: '0.65rem' }}
+                />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: '#6a6a82' }}>PIN</label>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      value={profilePin}
+                      onChange={e => setProfilePin(e.target.value.replace(/[^0-9]/g, ''))}
+                      placeholder="4-cyfrowy PIN"
+                      style={{ width: '100%', background: '#1e1e28', border: '1px solid #2d2d3d', borderRadius: 6, color: '#e8e4d9', padding: '0.65rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: '#6a6a82' }}>Powtórz PIN</label>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      value={profilePinConfirm}
+                      onChange={e => setProfilePinConfirm(e.target.value.replace(/[^0-9]/g, ''))}
+                      placeholder="Powtórz PIN"
+                      style={{ width: '100%', background: '#1e1e28', border: '1px solid #2d2d3d', borderRadius: 6, color: '#e8e4d9', padding: '0.65rem' }}
+                    />
+                  </div>
+                </div>
+
+                <label style={{ fontSize: '0.75rem', color: '#6a6a82' }}>Klucz dostępu</label>
+                <input
+                  type="text"
+                  value={accessKey}
+                  onChange={e => setAccessKey(e.target.value)}
+                  placeholder="ac_..."
+                  style={{ width: '100%', background: '#1e1e28', border: '1px solid #2d2d3d', borderRadius: 6, color: '#e8e4d9', padding: '0.65rem' }}
+                />
+
+                <div style={{ color: '#6a6a82', fontSize: '0.8rem', marginBottom: '0.65rem' }}>
+                  Dostępne klucze: {availableAccessKeys.length}. Klucz musi być z listy, aby utworzyć profil.
+                </div>
+                {availableAccessKeys.length > 0 && (
+                  <div style={{ color: '#8a8a9e', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
+                    Przykładowe wolne klucze:
+                    <div style={{ marginTop: '0.35rem', background: '#161622', border: '1px solid #2d2d3d', borderRadius: 6, padding: '0.65rem', fontSize: '0.78rem', wordBreak: 'break-all' }}>
+                      {availableAccessKeys.slice(0, 3).join(', ')}{availableAccessKeys.length > 3 ? ' …' : ''}
+                    </div>
+                  </div>
+                )}
+                <button
+                  onClick={handleCreateProfile}
+                  disabled={availableAccessKeys.length === 0}
+                  style={{ width: '100%', background: availableAccessKeys.length === 0 ? '#2d2d3d' : 'linear-gradient(135deg, #4ecb71, #2a9d47)', border: 'none', borderRadius: 6, color: '#0d0d11', padding: '0.75rem', fontWeight: 700, cursor: availableAccessKeys.length === 0 ? 'not-allowed' : 'pointer' }}
+                >
+                  Utwórz profil
+                </button>
+                {availableAccessKeys.length === 0 && (
+                  <div style={{ color: '#e05555', fontSize: '0.8rem', marginTop: '0.5rem' }}>Brak dostępnych kluczy. Nie można utworzyć nowego profilu.</div>
+                )}
+              </>
             )}
-            {!isSettingPin && <button onClick={() => { setIsSettingPin(true); setPinInput(''); setPinConfirm(''); }} style={{ background: '#22222e', border: '1px solid #f5a623', color: '#f5a623', padding: '0.6rem', borderRadius: 6, cursor: 'pointer' }}>Zresetuj / Zmień PIN</button>}
           </div>
         </div>
       </div>
@@ -622,12 +830,18 @@ export default function KalkulatorAllegro() {
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button onClick={handleLock} title="Zablokuj aplikację" style={{ background: '#22222e', border: 'none', color: '#f5a623', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer', fontFamily: 'inherit' }}>🔒</button>
             <button onClick={handleOpenChangePin} title="Zmień PIN" style={{ background: '#22222e', border: '1px solid #2d2d3d', color: '#8a8a9e', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer', fontFamily: 'inherit' }}>⚙️</button>
+            <button onClick={() => setShowProfileModal(true)} title="Zarządzaj profilami" style={{ background: '#22222e', border: '1px solid #2d2d3d', color: '#8a8a9e', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer', fontFamily: 'inherit' }}>👤</button>
             <button onClick={() => { setShowCloudPanel(!showCloudPanel); if (!showCloudPanel) fetchCloudCalculations(); }} title="Panel wycen w chmurze" style={{ background: '#22222e', border: '1px solid #2d2d3d', color: '#8a8a9e', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer', fontFamily: 'inherit' }}>☁️</button>
           </div>
         </div>
         <p style={{ color: "#4a4a5e", fontSize: "0.7rem", margin: "0.2rem 0 0 0", letterSpacing: "0.08em" }}>
           SYSTEM OPERACYJNY WYCENY PRODUKTÓW · AUTOSAVE ACTIVE
         </p>
+        {activeProfile && (
+          <p style={{ color: "#8a8a9e", fontSize: "0.75rem", margin: "0.35rem 0 0 0" }}>
+            Zalogowany profil: <strong style={{ color: "#f5a623" }}>{activeProfile.name}</strong>
+          </p>
+        )}
       </div>
 
       {showChangePinModal && (
@@ -695,6 +909,57 @@ export default function KalkulatorAllegro() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {showProfileModal && (
+        <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', zIndex: 1100 }}>
+          <div style={{ width: '90vw', maxWidth: 520, background: '#121218', border: '1px solid #1e1e26', borderRadius: 12, padding: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div>
+                <h3 style={{ margin: 0, color: '#f5a623' }}>Profile</h3>
+                <div style={{ color: '#6a6a82', fontSize: '0.8rem' }}>Wybierz profil i wpisz jego PIN, aby przełączyć konto.</div>
+              </div>
+              <button onClick={() => { setShowProfileModal(false); setProfileSwitchPin(''); }} style={{ background: 'transparent', border: 'none', color: '#8a8a9e', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              {profiles.length === 0 ? (
+                <div style={{ color: '#4a4a5e' }}>Brak dostępnych profili. Utwórz nowy profil, aby kontynuować.</div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <label style={{ fontSize: '0.75rem', color: '#6a6a82' }}>Profil</label>
+                    <select
+                      value={selectedProfileId}
+                      onChange={e => setSelectedProfileId(e.target.value)}
+                      style={{ width: '100%', background: '#1e1e28', border: '1px solid #2d2d3d', borderRadius: 6, color: '#e8e4d9', padding: '0.65rem' }}
+                    >
+                      {profiles.map(profile => (
+                        <option key={profile.id} value={profile.id}>{profile.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <label style={{ fontSize: '0.75rem', color: '#6a6a82' }}>PIN profilu</label>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      value={profileSwitchPin}
+                      onChange={e => setProfileSwitchPin(e.target.value.replace(/[^0-9]/g, ''))}
+                      placeholder="4-cyfrowy PIN"
+                      style={{ width: '100%', background: '#1e1e28', border: '1px solid #2d2d3d', borderRadius: 6, color: '#e8e4d9', padding: '0.65rem' }}
+                    />
+                  </div>
+                  <button
+                    onClick={() => handleSwitchProfile(selectedProfileId, profileSwitchPin)}
+                    style={{ width: '100%', background: 'linear-gradient(135deg, #4ecb71, #2a9d47)', border: 'none', borderRadius: 6, color: '#0d0d11', padding: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Przełącz profil
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
