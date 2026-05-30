@@ -1,7 +1,9 @@
 import { useState, useCallback, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from "react-router-dom";
+import { Routes, Route, Link, useLocation } from "react-router-dom";
 import { ProfileAuthScreen, ChangePinModal, ProfileManagementModal } from "./components/AuthModals";
 import { useCalculator } from "./hooks/useCalculator";
+import { useApp } from "./contexts/AppContext.jsx";
+import { useAuth } from "./contexts/AuthContext.jsx";
 import CalculatorPage from "./pages/CalculatorPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 
@@ -485,7 +487,7 @@ export default function App() {
   };
 
   return (
-    <Router>
+    <>
       <div style={{ minHeight: "100vh", width: "100%", background: "#0d0d11", fontFamily: "'DM Mono', monospace", color: "#e8e4d9", padding: "1.5rem", display: "flex", flexDirection: "column", alignItems: "center" }}>
         <nav style={{ display: "flex", gap: "2rem", background: "#121218", border: "1px solid #1e1e26", padding: "0.75rem 2rem", borderRadius: "10px", width: "100%", maxWidth: "1140px", marginBottom: "1.5rem", alignItems: "center" }}>
           <strong style={{ color: "#f5a623", fontFamily: "'Syne', sans-serif" }}>Allegro Calc v2</strong>
@@ -506,7 +508,7 @@ export default function App() {
             <Link to="/analityka" style={{ color: "#e8e4d9", textDecoration: "none", fontSize: "0.85rem" }}>📊 Analityka</Link>
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: "0.5rem" }}>
-            <button onClick={() => setIsUnlocked(false)} title="Zablokuj" style={{ background: '#22222e', border: 'none', color: '#f5a623', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer' }}>🔒</button>
+            <button onClick={() => auth.logout()} title="Zablokuj" style={{ background: '#22222e', border: 'none', color: '#f5a623', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer' }}>🔒</button>
             <button onClick={handleOpenChangePin} title="Zmień PIN" style={{ background: '#22222e', border: '1px solid #2d2d3d', color: '#8a8a9e', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer' }}>⚙️</button>
             <button onClick={() => setShowProfileModal(true)} title="Profile" style={{ background: '#22222e', border: '1px solid #2d2d3d', color: '#8a8a9e', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer' }}>👤</button>
           </div>
@@ -611,28 +613,11 @@ export default function App() {
         </Routes>
 
         {showChangePinModal && (
-          <ChangePinModal
-            changeCurrentPin={changeCurrentPin}
-            setChangeCurrentPin={setChangeCurrentPin}
-            changeNewPin={changeNewPin}
-            setChangeNewPin={setChangeNewPin}
-            changeConfirmPin={changeConfirmPin}
-            setChangeConfirmPin={setChangeConfirmPin}
-            handleApplyChangePin={handleApplyChangePin}
-            handleCloseChangePin={handleCloseChangePin}
-          />
+          <ChangePinModal onClose={handleCloseChangePin} />
         )}
 
         {showProfileModal && (
-          <ProfileManagementModal
-            selectedProfileId={selectedProfileId}
-            setSelectedProfileId={setSelectedProfileId}
-            profiles={profiles}
-            profileSwitchPin={profileSwitchPin}
-            setProfileSwitchPin={setProfileSwitchPin}
-            handleSwitchProfile={handleSwitchProfile}
-            setShowProfileModal={setShowProfileModal}
-          />
+          <ProfileManagementModal onClose={() => setShowProfileModal(false)} />
         )}
 
         <Toast />
@@ -658,6 +643,6 @@ export default function App() {
           @media (max-width: 850px) { .workspace-grid { grid-template-columns: 1fr; gap: 1rem; } }
         `}</style>
       </div>
-    </Router>
+    </>
   );
 }
