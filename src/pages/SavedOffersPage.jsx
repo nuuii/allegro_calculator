@@ -15,6 +15,9 @@ const OfferSetCard = ({ offerSet, onLoad, onDelete, onExport, formatPLN, isNew, 
         <p className="saved-offer-card__meta">
           Utworzono: {new Date(offerSet.createdAt).toLocaleString()} przez <strong>{offerSet.createdBy}</strong>
         </p>
+        <p className="saved-offer-card__meta">
+          Dostawca: <strong>{offerSet.supplierName || 'Nie podano'}</strong>
+        </p>
       </div>
 
       <div className="saved-offer-card__stats">

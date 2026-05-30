@@ -40,7 +40,7 @@ export default async function handler(req, res) {
     // POST: Zapisz nową całą ofertę (zbiorczą tabelę)
     if (method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-      const { id: incomingId, offerName, items, createdBy } = body || {};
+      const { id: incomingId, offerName, items, createdBy, supplierName } = body || {};
       if (!Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ success: false, error: 'Tabela produktów jest pusta.' });
       }
@@ -54,6 +54,7 @@ export default async function handler(req, res) {
         id: normalizedIncomingId || Date.now(),
         name: offerName?.trim() || `Oferta ${offers.length + 1}`,
         offerName: offerName?.trim() || `Oferta ${offers.length + 1}`,
+        supplierName: supplierName?.trim() || '',
         items,
         createdBy: createdBy || 'Anonim',
         createdAt: existingIndex >= 0 ? offers[existingIndex].createdAt : new Date().toISOString(),

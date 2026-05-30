@@ -42,8 +42,22 @@ const normalizeOfferSet = (offerSet) => ({
   ...offerSet,
   name: offerSet.name || offerSet.offerName || 'Zestawienie bez nazwy',
   offerName: offerSet.offerName || offerSet.name || 'Zestawienie bez nazwy',
+  supplierName: offerSet.supplierName || resolveOfferSupplier(offerSet.items || []),
   items: Array.isArray(offerSet.items) ? offerSet.items : [],
 });
+
+function resolveOfferSupplier(items) {
+  if (!Array.isArray(items)) return '';
+  const suppliers = items
+    .map(item => item.supplier)
+    .filter(supplier => supplier && supplier !== '—')
+    .map(supplier => supplier.trim())
+    .filter(Boolean);
+  const uniqueSuppliers = [...new Set(suppliers.map(supplier => supplier.toLowerCase()))];
+  if (uniqueSuppliers.length === 0) return '';
+  if (uniqueSuppliers.length === 1) return suppliers[0];
+  return 'Wielu dostawców';
+}
 
 function LazyFallback({ compact = false }) {
   return (
@@ -55,7 +69,7 @@ function LazyFallback({ compact = false }) {
 
 function AppContent() {
   const { rates, ratesLoading, edgeConfig, fetchRatesData, toast, setToast } = useApp();
-  const { profiles, activeProfile, logout } = useAuth();
+  const { profiles, activeProfile, isAdmin, logout } = useAuth();
   const location = useLocation();
 
   const calc = useCalculator({ rates, activeProfile, setToast });
@@ -193,6 +207,7 @@ function AppContent() {
         name: offerName.trim(),
         createdAt: new Date().toISOString(),
         createdBy: activeProfile?.name || 'Anonim',
+        supplierName: resolveOfferSupplier(calc.savedCalculations),
         items: calc.savedCalculations
       };
       
@@ -204,6 +219,7 @@ function AppContent() {
           offerName: newOfferSet.name,
           items: newOfferSet.items,
           createdBy: newOfferSet.createdBy,
+          supplierName: newOfferSet.supplierName,
         };
 
         const response = await fetch('/api/calculations', {
@@ -313,6 +329,7 @@ function AppContent() {
             <button type="button" className="profile-pill" onClick={() => setShowProfileModal(true)}>
               <span>{activeProfile.name.slice(0, 1).toUpperCase()}</span>
               {activeProfile.name}
+              {isAdmin && <strong>Admin</strong>}
             </button>
           )}
           <Link to="/ustawienia" title="Ustawienia" className={`icon-shell-button ${activeTab === 'ustawienia' ? 'is-active' : ''}`}>
@@ -381,6 +398,7 @@ function AppContent() {
           onSave={handleSaveWholeOffer}
           isSaving={isSavingOffer}
           formatPLN={formatPLN}
+          supplierName={resolveOfferSupplier(calc.savedCalculations)}
         />
       )}
       {offerPendingLoad && (
@@ -451,7 +469,7 @@ function ReplaceDraftModal({ offerSet, onClose, onConfirm }) {
   );
 }
 
-function SaveOfferModal({ items, activeProfile, onClose, onSave, isSaving, formatPLN }) {
+function SaveOfferModal({ items, activeProfile, onClose, onSave, isSaving, formatPLN, supplierName }) {
   const [offerName, setOfferName] = useState(`Zestawienie z ${new Date().toLocaleDateString()}`);
   const totalValue = items.reduce((sum, item) => sum + (item.offerPrice || 0) * (item.quantity || 1), 0);
   const totalProfit = items.reduce((sum, item) => sum + (item.profit || 0) * (item.quantity || 1), 0);
@@ -497,6 +515,10 @@ function SaveOfferModal({ items, activeProfile, onClose, onSave, isSaving, forma
           <div>
             <span>Autor</span>
             <strong>{activeProfile?.name || 'Anonim'}</strong>
+          </div>
+          <div>
+            <span>Dostawca</span>
+            <strong>{supplierName || 'Nie podano'}</strong>
           </div>
         </div>
 

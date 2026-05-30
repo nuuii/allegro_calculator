@@ -63,7 +63,7 @@ const ProfileSwitchCard = ({ profile, isActive, onSwitch }) => {
 };
 
 export default function SettingsPage({ profiles, activeProfile, edgeConfig, onLogout }) {
-  const { handleApplyChangePin, handleSwitchProfile } = useAuth();
+  const { handleApplyChangePin, handleSwitchProfile, isAdmin, handleSetProfileAdmin, isBootstrapAdminProfile } = useAuth();
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -129,6 +129,38 @@ export default function SettingsPage({ profiles, activeProfile, edgeConfig, onLo
               Powyższe wartości są zarządzane centralnie z panelu Vercel Edge Config i są wspólne dla wszystkich użytkowników.
             </p>
           </SettingsCard>
+
+          {isAdmin && (
+            <SettingsCard title="Panel administratora">
+              <p className="admin-panel-note">
+                Zarządzaj uprawnieniami profili. Panel jest widoczny tylko dla kont z rolą administratora.
+              </p>
+              <div className="admin-profile-list">
+                {profiles.map(profile => {
+                  const profileIsAdmin = profile.permissions?.admin || profile.role === 'admin';
+                  const isBootstrapAdmin = isBootstrapAdminProfile(profile);
+
+                  return (
+                    <div className="admin-profile-row" key={profile.id}>
+                      <div>
+                        <strong>{profile.name}</strong>
+                        <span>{profileIsAdmin ? 'Administrator' : 'Użytkownik'}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className={profileIsAdmin ? "secondary-action secondary-action--danger" : "primary-action primary-action--compact"}
+                        onClick={() => handleSetProfileAdmin(profile.id, !profileIsAdmin)}
+                        disabled={isBootstrapAdmin}
+                        title={isBootstrapAdmin ? 'Główne konto administratora jest chronione' : undefined}
+                      >
+                        {profileIsAdmin ? 'Odbierz admina' : 'Nadaj admina'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </SettingsCard>
+          )}
         </div>
 
         <SettingsCard title="Przełączanie Profili">

@@ -11,6 +11,28 @@ const LOCAL_STORAGE_KEYS = {
   ACTIVE_PROFILE_ID: 'calcallegro_active_profile_id',
 };
 
+const BOOTSTRAP_ADMIN_NAME = 'bartek';
+const BOOTSTRAP_ADMIN_ACCESS_KEY_HASH = '1e79a2b179a943451f568f2b5c71d800231aed4e92bdeb1b5a56dbc4b91891cd';
+
+const isBootstrapAdminProfile = (profile) => (
+  profile?.name?.trim().toLowerCase() === BOOTSTRAP_ADMIN_NAME &&
+  (profile?.accessKeyHash === BOOTSTRAP_ADMIN_ACCESS_KEY_HASH || Boolean(profile?.accessKey))
+);
+
+const normalizeProfile = (profile) => {
+  const bootstrapAdmin = isBootstrapAdminProfile(profile);
+  const adminEnabled = bootstrapAdmin || profile?.role === 'admin' || profile?.permissions?.admin === true;
+
+  return {
+    ...profile,
+    role: adminEnabled ? 'admin' : (profile?.role || 'user'),
+    permissions: {
+      ...(profile?.permissions || {}),
+      admin: adminEnabled,
+    },
+  };
+};
+
 const hashPin = async (pin) => {
   const enc = new TextEncoder();
   const hashBuffer = await crypto.subtle.digest('SHA-256', enc.encode(pin));
@@ -22,7 +44,7 @@ export const AuthProvider = ({ children }) => {
 
   const [profiles, setProfiles] = useState(() => {
     const saved = localStorage.getItem(LOCAL_STORAGE_KEYS.PROFILES);
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved).map(normalizeProfile) : [];
   });
   const [activeProfileId, setActiveProfileId] = useState(() => localStorage.getItem(LOCAL_STORAGE_KEYS.ACTIVE_PROFILE_ID) || '');
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -40,6 +62,7 @@ export const AuthProvider = ({ children }) => {
   });
 
   const activeProfile = profiles.find(profile => profile.id === activeProfileId) || null;
+  const isAdmin = Boolean(activeProfile?.permissions?.admin || activeProfile?.role === 'admin' || isBootstrapAdminProfile(activeProfile));
 
   const saveProfiles = (nextProfiles) => {
     setProfiles(nextProfiles);
@@ -64,9 +87,27 @@ export const AuthProvider = ({ children }) => {
     if (pin !== pinConfirm) {
       setToast({ message: 'PINy nie są zgodne', type: 'error', visible: true }); return false;
     }
-    // TODO: Key validation should be done on the server side.
+    const keyValidationResponse = await fetch('/api/access-keys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessKey: key, profileName: name }),
+    });
+    const keyValidation = await keyValidationResponse.json().catch(() => ({}));
+
+    if (!keyValidationResponse.ok || !keyValidation.success) {
+      setToast({ message: keyValidation.error || 'Nie udało się zweryfikować klucza dostępu', type: 'error', visible: true });
+      return false;
+    }
+
     const hash = await hashPin(pin);
-    const newProfile = { id: Date.now().toString(), name, pinHash: hash, accessKey: key, createdAt: new Date().toISOString() };
+    const newProfile = normalizeProfile({
+      id: Date.now().toString(),
+      name,
+      pinHash: hash,
+      accessKeyHash: keyValidation.data.accessKeyHash,
+      accessKeyUsedAt: keyValidation.data.usedAt,
+      createdAt: new Date().toISOString()
+    });
     const nextProfiles = [newProfile, ...profiles];
     saveProfiles(nextProfiles);
     setActiveProfileId(newProfile.id);
@@ -74,6 +115,44 @@ export const AuthProvider = ({ children }) => {
     setIsUnlocked(true);
     setProfileAuthMode('login');
     setToast({ message: `Profil ${name} został utworzony`, type: 'success', visible: true });
+    return true;
+  };
+
+  const handleSetProfileAdmin = (profileId, enabled) => {
+    if (!isAdmin) {
+      setToast({ message: 'Brak uprawnień administratora.', type: 'error', visible: true });
+      return false;
+    }
+
+    const targetProfile = profiles.find(profile => profile.id === profileId);
+    if (!targetProfile) {
+      setToast({ message: 'Nie znaleziono profilu.', type: 'error', visible: true });
+      return false;
+    }
+
+    if (isBootstrapAdminProfile(targetProfile) && !enabled) {
+      setToast({ message: 'Konto głównego administratora nie może utracić uprawnień.', type: 'error', visible: true });
+      return false;
+    }
+
+    const nextProfiles = profiles.map(profile => {
+      if (profile.id !== profileId) return profile;
+      return normalizeProfile({
+        ...profile,
+        role: enabled ? 'admin' : 'user',
+        permissions: {
+          ...(profile.permissions || {}),
+          admin: enabled,
+        },
+      });
+    });
+
+    saveProfiles(nextProfiles);
+    setToast({
+      message: enabled ? `Nadano uprawnienia administratora profilowi ${targetProfile.name}.` : `Odebrano uprawnienia administratora profilowi ${targetProfile.name}.`,
+      type: 'success',
+      visible: true
+    });
     return true;
   };
 
@@ -147,9 +226,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const value = {
-    profiles, activeProfile, activeProfileId, isUnlocked, logout,
+    profiles, activeProfile, activeProfileId, isUnlocked, isAdmin, logout,
     profileAuthMode, setProfileAuthMode, selectedProfileId, setSelectedProfileId,
-    handleCreateProfile, handleLoginProfile, handleSwitchProfile, handleApplyChangePin
+    handleCreateProfile, handleLoginProfile, handleSwitchProfile, handleApplyChangePin,
+    handleSetProfileAdmin, isBootstrapAdminProfile
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

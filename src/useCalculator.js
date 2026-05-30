@@ -106,6 +106,23 @@ export function useCalculator({ rates, activeProfile, setToast }) {
     if (!purchaseCost) {
       setToast?.({ message: "Dodano produkt bez kosztu zakupu. Zysk i marża mogą być niepełne.", type: 'info', visible: true });
     }
+    const nextSupplier = supplierName.trim();
+    const conflictingSupplier = nextSupplier
+      ? savedCalculations.find(item => {
+          const existingSupplier = item.supplier && item.supplier !== "—" ? item.supplier.trim() : "";
+          return existingSupplier && existingSupplier.toLowerCase() !== nextSupplier.toLowerCase();
+        })
+      : null;
+
+    if (conflictingSupplier) {
+      setToast?.({
+        message: `Nie mieszaj dostawców w jednym zestawieniu. Obecna lista dotyczy: ${conflictingSupplier.supplier}.`,
+        type: 'error',
+        visible: true
+      });
+      return;
+    }
+
     const newItem = {
       id: editingId || Date.now(),
       name: prodName.trim() || "Produkt bez nazwy",
