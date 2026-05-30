@@ -64,6 +64,7 @@ export default function KalkulatorAllegro() {
   const [ratesError, setRatesError] = useState(null);
   const [ratesDate, setRatesDate] = useState(null);
   const [savedCalculations, setSavedCalculations] = useState([]);
+  const [editingId, setEditingId] = useState(null);
   
   // Nowy stan dla ładowania zapytania do Apify
   const [eanLoading, setEanLoading] = useState(false);
@@ -185,11 +186,33 @@ export default function KalkulatorAllegro() {
   const isNegative = result && result.profit < 0;
   const currentRate = rates[purchaseCurrency];
 
+  const handleEditItem = (item) => {
+    setProdName(item.name);
+    setProdEan(item.ean === "—" ? "" : item.ean);
+    setOfferPrice(item.offerPrice.toString().replace(".", ","));
+    setPurchaseCost(item.purchaseCost.toString().replace(".", ","));
+    setPurchaseCurrency(item.currency);
+    setQuantity(item.quantity.toString());
+    setAllegroDiscounted(item.allegroDiscounted);
+    setEditingId(item.id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setProdName("");
+    setProdEan("");
+    setOfferPrice("");
+    setPurchaseCost("");
+    setQuantity("1");
+    setAllegroDiscounted(false);
+  };
+
   const handleAddToList = () => {
     if (!offerPrice) return;
 
     const newItem = {
-      id: Date.now(),
+      id: editingId || Date.now(),
       name: prodName.trim() || "Produkt bez nazwy",
       ean: prodEan.trim() || "—",
       supplier: supplierName.trim() || "—",
@@ -208,16 +231,23 @@ export default function KalkulatorAllegro() {
       vat: vat
     };
 
-    setSavedCalculations(prev => [newItem, ...prev]);
+    if (editingId) {
+      setSavedCalculations(prev => prev.map(item => item.id === editingId ? newItem : item));
+      setEditingId(null);
+    } else {
+      setSavedCalculations(prev => [newItem, ...prev]);
+    }
     setProdName("");
     setProdEan("");
     setOfferPrice("");
     setPurchaseCost("");
     setQuantity("1");
+    setAllegroDiscounted(false);
   };
 
   const handleRemoveFromList = (id) => {
     setSavedCalculations(prev => prev.filter(item => item.id !== id));
+    if (editingId === id) handleCancelEdit();
   };
 
   const handleExportToExcel = () => {
@@ -542,12 +572,22 @@ export default function KalkulatorAllegro() {
                 </div>
               )}
 
-              <button
-                onClick={handleAddToList}
-                style={{ width: "100%", background: "linear-gradient(135deg, #4ecb71 0%, #2a9d47 100%)", border: "none", borderRadius: "6px", color: "#0d0d11", fontSize: "0.88rem", fontWeight: 600, padding: "0.6rem", cursor: "pointer", fontFamily: "inherit" }}
-              >
-                ＋ ZAPISZ DO LISTY ZBIORCZEJ
-              </button>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button
+                  onClick={handleAddToList}
+                  style={{ flex: 1, background: "linear-gradient(135deg, #4ecb71 0%, #2a9d47 100%)", border: "none", borderRadius: "6px", color: "#0d0d11", fontSize: "0.88rem", fontWeight: 600, padding: "0.6rem", cursor: "pointer", fontFamily: "inherit" }}
+                >
+                  {editingId ? "✓ AKTUALIZUJ WYCENĘ" : "＋ ZAPISZ DO LISTY ZBIORCZEJ"}
+                </button>
+                {editingId && (
+                  <button
+                    onClick={handleCancelEdit}
+                    style={{ background: "#1e1e28", border: "1px solid #e05555", color: "#e05555", borderRadius: "6px", fontSize: "0.88rem", fontWeight: 600, padding: "0.6rem", cursor: "pointer", fontFamily: "inherit", minWidth: "100px" }}
+                  >
+                    ✕ ANULUJ
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -609,10 +649,18 @@ export default function KalkulatorAllegro() {
                     <td style={{ color: item.margin > 0 ? "#4ecb71" : "#e05555", fontWeight: 500 }}>
                       {formatPct(item.margin)}
                     </td>
-                    <td>
+                    <td style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+                      <button 
+                        onClick={() => handleEditItem(item)}
+                        style={{ background: "transparent", border: "none", color: "#f5a623", cursor: "pointer", fontSize: "0.85rem", padding: "0.2rem 0.4rem" }}
+                        title="Edytuj wycenę"
+                      >
+                        ✎
+                      </button>
                       <button 
                         onClick={() => handleRemoveFromList(item.id)}
-                        style={{ background: "transparent", border: "none", color: "#4a4a5e", cursor: "pointer", fontSize: "0.85rem" }}
+                        style={{ background: "transparent", border: "none", color: "#4a4a5e", cursor: "pointer", fontSize: "0.85rem", padding: "0.2rem 0.4rem" }}
+                        title="Usuń wycenę"
                       >
                         ✕
                       </button>
