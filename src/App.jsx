@@ -253,30 +253,77 @@ export default function KalkulatorAllegro() {
   const handleExportToExcel = () => {
     if (savedCalculations.length === 0 || !window.XLSX) return;
 
+    const XLSX = window.XLSX;
+
+    const headers = [
+      "Lp.", "Nazwa produktu", "Ilość", "EAN / SKU", "Dostawca",
+      "Cena oferty (Brutto PLN)", "Stawka VAT (%)", "Prowizja obniżona",
+      "Koszt zakupu (Waluta)", "Waluta zakupu", "Kurs waluty",
+      "Koszt zakupu (PLN)", "Prowizja Allegro (PLN)", "Koszt wysyłki (PLN)",
+      "Wpływ operacyjny (Netto PLN)", "Zysk czysty (PLN)", "Marża"
+    ];
+
     const dataForExcel = savedCalculations.map((item, index) => ({
       "Lp.": index + 1,
       "Nazwa produktu": item.name,
-      "Ilość": item.quantity ? item.quantity : "-",
+      "Ilość": !isNaN(item.quantity) ? item.quantity : null,
       "EAN / SKU": item.ean,
       "Dostawca": item.supplier,
-      "Cena oferty (Brutto PLN)": item.offerPrice,
+      "Cena oferty (Brutto PLN)": typeof item.offerPrice === 'number' ? item.offerPrice : Number(item.offerPrice) || 0,
       "Stawka VAT (%)": item.vat,
       "Prowizja obniżona": item.allegroDiscounted ? "TAK" : "NIE",
-      "Koszt zakupu (Waluta)": item.purchaseCost,
+      "Koszt zakupu (Waluta)": typeof item.purchaseCost === 'number' ? item.purchaseCost : Number(item.purchaseCost) || 0,
       "Waluta zakupu": item.currency,
       "Kurs waluty": item.exchangeRate ? Math.round(item.exchangeRate * 10000) / 10000 : 1,
-      "Koszt zakupu (PLN)": item.costPLN ? Math.round(item.costPLN * 100) / 100 : 0,
-      "Prowizja Allegro (PLN)": Math.round(item.allegroFee * 100) / 100,
-      "Koszt wysyłki (PLN)": item.shipping,
-      "Wpływ operacyjny (Netto PLN)": Math.round(item.income * 100) / 100,
-      "Zysk czysty (PLN)": item.profit ? Math.round(item.profit * 100) / 100 : "—",
-      "Marża (%)": item.margin ? Math.round(item.margin * 10000) / 100 : "—"
+      "Koszt zakupu (PLN)": item.costPLN || 0,
+      "Prowizja Allegro (PLN)": item.allegroFee || 0,
+      "Koszt wysyłki (PLN)": item.shipping || 0,
+      "Wpływ operacyjny (Netto PLN)": item.income || 0,
+      "Zysk czysty (PLN)": typeof item.profit === 'number' ? item.profit : (item.profit ? Number(item.profit) : null),
+      "Marża": typeof item.margin === 'number' ? item.margin : (item.margin ? Number(item.margin) : null)
     }));
 
-    const worksheet = window.XLSX.utils.json_to_sheet(dataForExcel);
-    const workbook = window.XLSX.utils.book_new();
-    window.XLSX.utils.book_append_sheet(workbook, worksheet, "Kalkulacje Allegro");
-    window.XLSX.writeFile(workbook, `Kalkulacje_Allegro_${new Date().toISOString().slice(0,10)}.xlsx`);
+    const worksheet = XLSX.utils.json_to_sheet(dataForExcel, { header: headers });
+
+    // Przyjazne szerokości kolumn
+    worksheet['!cols'] = [
+      { wch: 5 }, { wch: 36 }, { wch: 8 }, { wch: 14 }, { wch: 18 },
+      { wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 10 },
+      { wch: 10 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 18 }, { wch: 14 }, { wch: 10 }
+    ];
+
+    // Zamroź pierwszy wiersz (nagłówki) i dodaj autofilter
+    worksheet['!freeze'] = { ySplit: 1 };
+    worksheet['!autofilter'] = { ref: worksheet['!ref'] };
+
+    // Ustaw formaty liczb dla odpowiednich kolumn
+    const range = XLSX.utils.decode_range(worksheet['!ref']);
+    const colIndex = (name) => headers.indexOf(name);
+
+    for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+      const setFmt = (colName, fmt) => {
+        const C = colIndex(colName);
+        if (C < 0) return;
+        const addr = XLSX.utils.encode_cell({ r: R, c: C });
+        const cell = worksheet[addr];
+        if (cell && typeof cell.v === 'number') cell.z = fmt;
+      };
+
+      setFmt('Cena oferty (Brutto PLN)', '#,##0.00');
+      setFmt('Koszt zakupu (PLN)', '#,##0.00');
+      setFmt('Prowizja Allegro (PLN)', '#,##0.00');
+      setFmt('Koszt wysyłki (PLN)', '#,##0.00');
+      setFmt('Wpływ operacyjny (Netto PLN)', '#,##0.00');
+      setFmt('Zysk czysty (PLN)', '#,##0.00');
+      setFmt('Kurs waluty', '#,##0.0000');
+      setFmt('Marża', '0.00%');
+      setFmt('Ilość', '0');
+      setFmt('Stawka VAT (%)', '0');
+    }
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Kalkulacje Allegro');
+    XLSX.writeFile(workbook, `Kalkulacje_Allegro_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
   return (
