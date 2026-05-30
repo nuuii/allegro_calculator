@@ -20,6 +20,8 @@ export function Field({ label, value, onChange, placeholder, note }) {
           fontSize: "0.95rem",
           fontFamily: "inherit",
           padding: "0.5rem 0.75rem",
+          height: "42px",
+          boxSizing: "border-box",
         }}
       />
       {note && <div style={{ fontSize: "0.65rem", color: "#3a3a4e", marginTop: "0.2rem" }}>{note}</div>}
