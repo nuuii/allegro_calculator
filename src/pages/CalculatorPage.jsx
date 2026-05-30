@@ -1,6 +1,6 @@
 import React from "react";
 import { Field, ResultRow } from "../components/Ui";
-import ResultsTable from "../components/ResultsTable";
+import ResultsTable from "../ResultsTable.jsx";
 
 export default function CalculatorPage({
   prodName,
