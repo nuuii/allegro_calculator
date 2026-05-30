@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect } from "react";
+import { lazy, Suspense, useRef, useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from './AuthContext.jsx';
 import { useApp } from './AppContext.jsx';
@@ -74,6 +74,7 @@ function AppContent() {
   const [isSavingOffer, setIsSavingOffer] = useState(false);
   const [newlySavedOfferId, setNewlySavedOfferId] = useState(null);
   const [eanLoading, setEanLoading] = useState(false);
+  const saveOfferInFlightRef = useRef(false);
 
   const activeTab = location.pathname === '/saved' ? 'oferty' : location.pathname === '/ustawienia' ? 'ustawienia' : 'kalkulator';
 
@@ -173,12 +174,13 @@ function AppContent() {
   };
 
   const handleSaveWholeOffer = async (offerName) => {
-    if (isSavingOffer) return;
+    if (isSavingOffer || saveOfferInFlightRef.current) return;
     if (calc.savedCalculations.length === 0) {
       setToast({ message: "Lista kalkulacji jest pusta. Dodaj przynajmniej jeden produkt.", type: 'error', visible: true });
       return;
     }
     if (offerName && offerName.trim()) {
+      saveOfferInFlightRef.current = true;
       const newOfferSet = {
         id: Date.now(),
         name: offerName.trim(),
@@ -208,14 +210,18 @@ function AppContent() {
         }
 
         const resJson = await response.json();
+        if (resJson.success === false) {
+          throw new Error(resJson.error || 'Błąd podczas zapisywania do chmury');
+        }
         const saved = normalizeOfferSet(resJson.data || newOfferSet);
+
+        // Natychmiast czyścimy lokalny bufor po potwierdzonym sukcesie zapisu.
+        calc.handleResetSavedCalculations();
+        localStorage.removeItem('calcallegro_saved_calculations');
 
         // Dodajemy do lokalnej listy (użyj odpowiedzi z serwera jeśli jest)
         setSavedOffers(prev => [saved, ...prev]);
         setNewlySavedOfferId(saved.id);
-
-        // Czyścimy lokalna liste wycen w kalkulatorze
-        calc.handleResetSavedCalculations();
         setShowSaveOfferModal(false);
 
         setToast({ message: `Zestawienie "${saved.name}" zostało pomyślnie zapisane w chmurze!`, type: 'success', visible: true });
@@ -224,6 +230,7 @@ function AppContent() {
         console.error('Błąd zapisu:', error);
         setToast({ message: `Nie udało się zapisać w chmurze. Lokalna lista nie została wyczyszczona. ${error.message}`, type: 'error', visible: true });
       } finally {
+        saveOfferInFlightRef.current = false;
         setIsSavingOffer(false);
       }
     }
@@ -266,33 +273,45 @@ function AppContent() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", width: "100%", background: "#0d0d11", fontFamily: "'DM Mono', monospace", color: "#e8e4d9", padding: "1.5rem", display: "flex", flexDirection: "column", alignItems: "center" }}>
-      
-      <nav style={{ display: "flex", gap: "2rem", background: "#121218", border: "1px solid #1e1e26", padding: "0.75rem 2rem", borderRadius: "10px", width: "100%", maxWidth: "1140px", marginBottom: "1.5rem", alignItems: "center" }}>
-        <strong style={{ color: "#f5a623", fontFamily: "'Syne', sans-serif" }}>Allegro Calc v2</strong>
-        <div style={{ display: "flex", gap: "1rem" }}>
-          <Link to="/" style={{ color: activeTab === 'kalkulator' ? '#e8e4d9' : '#6a6a82', textDecoration: "none", fontSize: "0.85rem", fontWeight: activeTab === 'kalkulator' ? 700 : 400 }}>
-            🧮 Kalkulator
-          </Link>
-          <Link to="/saved" style={{ color: activeTab === 'oferty' ? '#e8e4d9' : '#6a6a82', textDecoration: "none", fontSize: "0.85rem", fontWeight: activeTab === 'oferty' ? 700 : 400 }}>
-            📂 Zapisane oferty
-          </Link>
-          <Link to="/analityka" style={{ color: "#e8e4d9", textDecoration: "none", fontSize: "0.85rem" }}>
-            📊 Analityka
-          </Link>
-        </div>
-        <div style={{ marginLeft: "auto", display: "flex", gap: "0.5rem" }}>
-          <button onClick={logout} title="Zablokuj" style={{ background: '#22222e', border: '1px solid #2d2d3d', color: '#f5a623', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer' }}>🔒</button>
-          <Link to="/ustawienia" title="Ustawienia" style={{ background: activeTab === 'ustawienia' ? '#f5a623' : '#22222e', color: activeTab === 'ustawienia' ? '#0d0d11' : '#8a8a9e', border: '1px solid #2d2d3d', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>⚙️</Link>
-          <button onClick={() => setShowProfileModal(true)} title="Profile" style={{ background: '#22222e', border: '1px solid #2d2d3d', color: '#8a8a9e', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer' }}>👤</button>
-        </div>
-      </nav>
+    <div className="app-shell">
+      <header className="app-topbar">
+        <Link to="/" className="app-brand" aria-label="ProfitDesk">
+          <span className="app-brand__mark">PD</span>
+          <span>
+            <strong>ProfitDesk</strong>
+            <small>Allegro margin operations</small>
+          </span>
+        </Link>
 
-      {activeProfile && (
-        <div style={{ width: "100%", maxWidth: "1140px", textAlign: "right", paddingRight: "0.5rem", marginBottom: "0.5rem", fontSize: "0.8rem", color: "#8a8a9e" }}>
-          Zalogowany profil: <strong style={{ color: "#f5a623" }}>{activeProfile.name}</strong>
+        <nav className="app-nav" aria-label="Główna nawigacja">
+          <Link to="/" className={`app-nav__link ${activeTab === 'kalkulator' ? 'is-active' : ''}`}>
+            Kalkulator
+          </Link>
+          <Link to="/saved" className={`app-nav__link ${activeTab === 'oferty' ? 'is-active' : ''}`}>
+            Zapisane oferty
+          </Link>
+          <Link to="/analityka" className={`app-nav__link ${location.pathname === '/analityka' ? 'is-active' : ''}`}>
+            Analityka
+          </Link>
+        </nav>
+
+        <div className="app-actions">
+          {activeProfile && (
+            <button type="button" className="profile-pill" onClick={() => setShowProfileModal(true)}>
+              <span>{activeProfile.name.slice(0, 1).toUpperCase()}</span>
+              {activeProfile.name}
+            </button>
+          )}
+          <Link to="/ustawienia" title="Ustawienia" className={`icon-shell-button ${activeTab === 'ustawienia' ? 'is-active' : ''}`}>
+            Ustawienia
+          </Link>
+          <button type="button" onClick={logout} title="Zablokuj" className="icon-shell-button">
+            Zablokuj
+          </button>
         </div>
-      )}
+      </header>
+
+      <main className="app-main">
 
       <Suspense fallback={<LazyFallback />}>
         <Routes>
@@ -374,6 +393,7 @@ function AppContent() {
           {toast.message}
         </div>
       )}
+      </main>
     </div>
   );
 }

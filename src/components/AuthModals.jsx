@@ -15,141 +15,147 @@ export function ProfileAuthScreen() {
   const [loginPin, setLoginPin] = useState("");
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0d11', color: '#e8e4d9', padding: '1.5rem' }}>
-      <div style={{ width: 520, maxWidth: '96%', background: '#121218', border: '1px solid #1e1e26', borderRadius: 12, padding: '1.5rem' }}>
-        <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#f5a623' }}>{profileAuthMode === 'signup' ? 'Utwórz profil' : 'Wybierz profil'}</h2>
-        <p style={{ color: '#6a6a82', fontSize: '0.9rem', marginTop: '0.5rem' }}>
-          {profiles.length === 0
-            ? 'Zacznij od utworzenia profilu. Potrzebny jest ważny klucz dostępu.'
-            : profileAuthMode === 'signup'
-              ? 'Utwórz nowy profil, podając nazwę, PIN i ważny klucz dostępu.'
-              : 'Wybierz profil i wprowadź PIN, aby odblokować aplikację.'}
-        </p>
+    <div className="auth-screen">
+      <section className="auth-panel" aria-labelledby="auth-title">
+        <div className="auth-brand">
+          <span className="app-brand__mark">PD</span>
+          <div>
+            <strong>ProfitDesk</strong>
+            <small>Allegro margin operations</small>
+          </div>
+        </div>
+
+        <div className="auth-header">
+          <h1 id="auth-title">{profileAuthMode === 'signup' ? 'Utwórz profil' : 'Wybierz profil'}</h1>
+          <p>
+            {profiles.length === 0
+              ? 'Skonfiguruj pierwszy profil, aby rozpocząć pracę w kalkulatorze marż.'
+              : profileAuthMode === 'signup'
+                ? 'Dodaj nowy profil użytkownika z prywatnym PIN-em dostępu.'
+                : 'Wybierz profil i podaj PIN, aby odblokować panel operacyjny.'}
+          </p>
+        </div>
 
         {profiles.length > 0 && (
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+          <div className="segmented-control">
             <button
+              type="button"
               onClick={() => setProfileAuthMode('login')}
-              style={{ flex: 1, background: profileAuthMode === 'login' ? '#f5a623' : '#22222e', border: 'none', color: profileAuthMode === 'login' ? '#0d0d11' : '#8a8a9e', borderRadius: 6, padding: '0.65rem', cursor: 'pointer' }}
+              className={profileAuthMode === 'login' ? 'is-active' : ''}
             >
               Logowanie
             </button>
             <button
+              type="button"
               onClick={() => setProfileAuthMode('signup')}
-              style={{ flex: 1, background: profileAuthMode === 'signup' ? '#f5a623' : '#22222e', border: 'none', color: profileAuthMode === 'signup' ? '#0d0d11' : '#8a8a9e', borderRadius: 6, padding: '0.65rem', cursor: 'pointer' }}
+              className={profileAuthMode === 'signup' ? 'is-active' : ''}
             >
               Nowy profil
             </button>
           </div>
         )}
 
-        <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+        <div className="auth-form">
           {profileAuthMode === 'login' && profiles.length > 0 ? (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div className="profile-grid">
                 {profiles.map(profile => (
                   <button
+                    type="button"
                     key={profile.id}
                     onClick={() => setSelectedProfileId(profile.id)}
-                    style={{
-                      background: selectedProfileId === profile.id ? '#f5a623' : '#1e1e28',
-                      color: selectedProfileId === profile.id ? '#0d0d11' : '#e8e4d9',
-                      border: '1px solid #2d2d3d',
-                      borderRadius: 8,
-                      padding: '0.85rem',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      fontSize: '0.9rem'
-                    }}
+                    className={`profile-select-card ${selectedProfileId === profile.id ? 'is-active' : ''}`}
                   >
-                    {profile.name}
-                    <div style={{ fontSize: '0.75rem', color: selectedProfileId === profile.id ? '#0d0d11' : '#8a8a9e', marginTop: '0.25rem' }}>
-                      PIN-protected
-                    </div>
+                    <strong>{profile.name}</strong>
+                    <span>PIN protected</span>
                   </button>
                 ))}
               </div>
 
-              <label style={{ fontSize: '0.75rem', color: '#6a6a82' }}>PIN</label>
+              <label className="form-label" htmlFor="login-pin">PIN</label>
               <input
+                id="login-pin"
+                className="form-input"
                 type="password"
                 inputMode="numeric"
                 value={loginPin}
                 onChange={e => setLoginPin(e.target.value.replace(/[^0-9]/g, ''))}
                 placeholder="4-cyfrowy PIN"
-                style={{ width: '100%', background: '#1e1e28', border: '1px solid #2d2d3d', borderRadius: 6, color: '#e8e4d9', padding: '0.65rem' }}
               />
 
-              <button
-                onClick={() => handleLoginProfile(selectedProfileId, loginPin)}
-                style={{ width: '100%', background: 'linear-gradient(135deg, #4ecb71, #2a9d47)', border: 'none', borderRadius: 6, color: '#0d0d11', padding: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
-              >
+              <button type="button" onClick={() => handleLoginProfile(selectedProfileId, loginPin)} className="primary-action">
                 Zaloguj się
               </button>
             </>
           ) : (
             <>
-              <label style={{ fontSize: '0.75rem', color: '#6a6a82' }}>Nazwa profilu</label>
+              <label className="form-label" htmlFor="profile-name">Nazwa profilu</label>
               <input
+                id="profile-name"
+                className="form-input"
                 type="text"
                 value={profileName}
                 onChange={e => setProfileName(e.target.value)}
                 placeholder="np. Kasia, Magda, Biznes"
-                style={{ width: '100%', background: '#1e1e28', border: '1px solid #2d2d3d', borderRadius: 6, color: '#e8e4d9', padding: '0.65rem' }}
               />
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div className="form-grid-2">
                 <div>
-                  <label style={{ fontSize: '0.75rem', color: '#6a6a82' }}>PIN</label>
+                  <label className="form-label" htmlFor="profile-pin">PIN</label>
                   <input
+                    id="profile-pin"
+                    className="form-input"
                     type="password"
                     inputMode="numeric"
                     value={profilePin}
                     onChange={e => setProfilePin(e.target.value.replace(/[^0-9]/g, ''))}
                     placeholder="4-cyfrowy PIN"
-                    style={{ width: '100%', background: '#1e1e28', border: '1px solid #2d2d3d', borderRadius: 6, color: '#e8e4d9', padding: '0.65rem' }}
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.75rem', color: '#6a6a82' }}>Powtórz PIN</label>
+                  <label className="form-label" htmlFor="profile-pin-confirm">Powtórz PIN</label>
                   <input
+                    id="profile-pin-confirm"
+                    className="form-input"
                     type="password"
                     inputMode="numeric"
                     value={profilePinConfirm}
                     onChange={e => setProfilePinConfirm(e.target.value.replace(/[^0-9]/g, ''))}
                     placeholder="Powtórz PIN"
-                    style={{ width: '100%', background: '#1e1e28', border: '1px solid #2d2d3d', borderRadius: 6, color: '#e8e4d9', padding: '0.65rem' }}
                   />
                 </div>
               </div>
 
-              <label style={{ fontSize: '0.75rem', color: '#6a6a82' }}>Klucz dostępu</label>
+              <label className="form-label" htmlFor="access-key">Klucz dostępu</label>
               <input
+                id="access-key"
+                className="form-input"
                 type="text"
                 value={accessKey}
                 onChange={e => setAccessKey(e.target.value)}
                 placeholder="ac_..."
-                style={{ width: '100%', background: '#1e1e28', border: '1px solid #2d2d3d', borderRadius: 6, color: '#e8e4d9', padding: '0.65rem' }}
               />
 
-              <div style={{ color: '#6a6a82', fontSize: '0.8rem', marginBottom: '0.65rem' }}>
-                Klucz dostępu otrzymasz od administratora. Wpisz go w polu powyżej.
-              </div>
+              <p className="form-help">Klucz dostępu otrzymasz od administratora wdrożenia.</p>
               <button
+                type="button"
                 onClick={async () => {
                   const success = await handleCreateProfile(profileName, profilePin, profilePinConfirm, accessKey);
                   if (success) {
-                    setProfileName(''); setProfilePin(''); setProfilePinConfirm(''); setAccessKey('');
+                    setProfileName('');
+                    setProfilePin('');
+                    setProfilePinConfirm('');
+                    setAccessKey('');
                   }
                 }}
-                style={{ width: '100%', background: 'linear-gradient(135deg, #4ecb71, #2a9d47)', border: 'none', borderRadius: 6, color: '#0d0d11', padding: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                className="primary-action"
               >
                 Utwórz profil
               </button>
             </>
           )}
         </div>
-      </div>
+      </section>
     </div>
   );
 }
@@ -162,24 +168,27 @@ export function ChangePinModal({ onClose }) {
 
   const handleSubmit = async () => {
     const success = await handleApplyChangePin(currentPin, newPin, confirmPin);
-    if (success) {
-      onClose();
-    }
+    if (success) onClose();
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', zIndex: 1200 }}>
-      <div style={{ width: 480, maxWidth: '96%', background: '#121218', border: '1px solid #1e1e26', borderRadius: 12, padding: '1rem' }}>
-        <h3 style={{ margin: 0, color: '#f5a623' }}>Zmień PIN</h3>
-        <p style={{ color: '#6a6a82', marginTop: '0.35rem' }}>Podaj obecny PIN, a następnie nowy PIN (min. 4 cyfry).</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.6rem' }}>
-          <input type="password" inputMode="numeric" placeholder="Bieżący PIN" value={currentPin} onChange={e => setCurrentPin(e.target.value.replace(/[^0-9]/g, ''))} style={{ padding: '0.5rem', borderRadius: 6, background: '#1e1e28', border: '1px solid #2d2d3d', color: '#e8e4d9' }} />
-          <input type="password" inputMode="numeric" placeholder="Nowy PIN" value={newPin} onChange={e => setNewPin(e.target.value.replace(/[^0-9]/g, ''))} style={{ padding: '0.5rem', borderRadius: 6, background: '#1e1e28', border: '1px solid #2d2d3d', color: '#e8e4d9' }} />
-          <input type="password" inputMode="numeric" placeholder="Powtórz nowy PIN" value={confirmPin} onChange={e => setConfirmPin(e.target.value.replace(/[^0-9]/g, ''))} style={{ padding: '0.5rem', borderRadius: 6, background: '#1e1e28', border: '1px solid #2d2d3d', color: '#e8e4d9' }} />
+    <div className="modal-backdrop">
+      <div className="save-offer-modal save-offer-modal--compact">
+        <div className="save-offer-modal__header">
+          <div>
+            <h3>Zmień PIN</h3>
+            <p>Podaj obecny PIN, a następnie nowy kod dostępu do profilu.</p>
+          </div>
+          <button type="button" className="modal-close" onClick={onClose}>×</button>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-          <button onClick={handleSubmit} style={{ flex: 1, background: 'linear-gradient(135deg,#4ecb71,#2a9d47)', border: 'none', padding: '0.6rem', borderRadius: 6, color: '#0d0d11', fontWeight: 700 }}>Zmień PIN</button>
-          <button onClick={onClose} style={{ background: '#22222e', border: '1px solid #2d2d3d', padding: '0.6rem', borderRadius: 6, color: '#8a8a9e' }}>Anuluj</button>
+        <div className="auth-form">
+          <input className="form-input" type="password" inputMode="numeric" placeholder="Bieżący PIN" value={currentPin} onChange={e => setCurrentPin(e.target.value.replace(/[^0-9]/g, ''))} />
+          <input className="form-input" type="password" inputMode="numeric" placeholder="Nowy PIN" value={newPin} onChange={e => setNewPin(e.target.value.replace(/[^0-9]/g, ''))} />
+          <input className="form-input" type="password" inputMode="numeric" placeholder="Powtórz nowy PIN" value={confirmPin} onChange={e => setConfirmPin(e.target.value.replace(/[^0-9]/g, ''))} />
+        </div>
+        <div className="modal-actions">
+          <button type="button" className="secondary-action" onClick={onClose}>Anuluj</button>
+          <button type="button" className="primary-action primary-action--compact" onClick={handleSubmit}>Zmień PIN</button>
         </div>
       </div>
     </div>
@@ -192,58 +201,43 @@ export function ProfileManagementModal({ onClose }) {
 
   const handleSubmit = async () => {
     const success = await handleSwitchProfile(selectedProfileId, pin);
-    if (success) {
-      onClose();
-    }
+    if (success) onClose();
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', zIndex: 1100 }}>
-      <div style={{ width: '90vw', maxWidth: 520, background: '#121218', border: '1px solid #1e1e26', borderRadius: 12, padding: '1.25rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+    <div className="modal-backdrop">
+      <div className="save-offer-modal save-offer-modal--compact">
+        <div className="save-offer-modal__header">
           <div>
-            <h3 style={{ margin: 0, color: '#f5a623' }}>Profile</h3>
-            <div style={{ color: '#6a6a82', fontSize: '0.8rem' }}>Wybierz profil i wpisz jego PIN, aby przełączyć konto.</div>
+            <h3>Profile użytkowników</h3>
+            <p>Wybierz profil i wpisz jego PIN, aby przełączyć konto.</p>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#8a8a9e', fontSize: '1.2rem', cursor: 'pointer', marginLeft: 'auto' }}>✕</button>
+          <button type="button" className="modal-close" onClick={onClose}>×</button>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-          {profiles.length === 0 ? (
-            <div style={{ color: '#4a4a5e' }}>Brak dostępnych profili.</div>
-          ) : (
-            <>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                <label style={{ fontSize: '0.75rem', color: '#6a6a82' }}>Profil</label>
-                <select
-                  value={selectedProfileId}
-                  onChange={e => setSelectedProfileId(e.target.value)}
-                  style={{ width: '100%', background: '#1e1e28', border: '1px solid #2d2d3d', borderRadius: 6, color: '#e8e4d9', padding: '0.65rem' }}
-                >
-                  {profiles.map(profile => (
-                    <option key={profile.id} value={profile.id}>{profile.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                <label style={{ fontSize: '0.75rem', color: '#6a6a82' }}>PIN profilu</label>
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  value={pin}
-                  onChange={e => setPin(e.target.value.replace(/[^0-9]/g, ''))}
-                  placeholder="4-cyfrowy PIN"
-                  style={{ width: '100%', background: '#1e1e28', border: '1px solid #2d2d3d', borderRadius: 6, color: '#e8e4d9', padding: '0.65rem' }}
-                />
-              </div>
-              <button
-                onClick={handleSubmit}
-                style={{ width: '100%', background: 'linear-gradient(135deg, #4ecb71, #2a9d47)', border: 'none', borderRadius: 6, color: '#0d0d11', padding: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
-              >
-                Przełącz profil
-              </button>
-            </>
-          )}
-        </div>
+
+        {profiles.length === 0 ? (
+          <div className="results-register__empty">Brak dostępnych profili.</div>
+        ) : (
+          <div className="auth-form">
+            <label className="form-label" htmlFor="switch-profile">Profil</label>
+            <select id="switch-profile" className="form-input" value={selectedProfileId} onChange={e => setSelectedProfileId(e.target.value)}>
+              {profiles.map(profile => (
+                <option key={profile.id} value={profile.id}>{profile.name}</option>
+              ))}
+            </select>
+            <label className="form-label" htmlFor="switch-profile-pin">PIN profilu</label>
+            <input
+              id="switch-profile-pin"
+              className="form-input"
+              type="password"
+              inputMode="numeric"
+              value={pin}
+              onChange={e => setPin(e.target.value.replace(/[^0-9]/g, ''))}
+              placeholder="4-cyfrowy PIN"
+            />
+            <button type="button" onClick={handleSubmit} className="primary-action">Przełącz profil</button>
+          </div>
+        )}
       </div>
     </div>
   );
