@@ -68,6 +68,20 @@ export default function KalkulatorAllegro() {
   
   // Nowy stan dla ładowania zapytania do Apify
   const [eanLoading, setEanLoading] = useState(false);
+  // PIN auth (stored as SHA-256 hash)
+  const [storedPin, setStoredPin] = useState(() => localStorage.getItem("calcallegro_pin_hash") || null);
+  const [isSettingPin, setIsSettingPin] = useState(() => !localStorage.getItem("calcallegro_pin_hash"));
+  const [pinInput, setPinInput] = useState("");
+  const [pinConfirm, setPinConfirm] = useState("");
+  // If a PIN hash exists, require unlock on startup
+  const [isUnlocked, setIsUnlocked] = useState(() => !localStorage.getItem("calcallegro_pin_hash"));
+  const [showChangePinModal, setShowChangePinModal] = useState(false);
+  const [changeCurrentPin, setChangeCurrentPin] = useState("");
+  const [changeNewPin, setChangeNewPin] = useState("");
+  const [changeConfirmPin, setChangeConfirmPin] = useState("");
+
+  // Edge Config
+  const [edgeConfig, setEdgeConfig] = useState({ smartThreshold: 44.99, isScraperActive: true });
 
   // Funkcja komunikująca się z Twoim serwerem /api/scrape.js
   const handleFindCheapestOffer = async () => {
@@ -128,6 +142,12 @@ export default function KalkulatorAllegro() {
       converted["PLN"] = 1;
       setRates(converted);
       setRatesDate(data.date);
+      
+      // Pobieramy konfigurację z Edge Config
+      if (data.config) {
+        setEdgeConfig(data.config);
+      }
+      
       setRatesLoading(false);
     })
     .catch(() => {
@@ -250,6 +270,71 @@ export default function KalkulatorAllegro() {
     if (editingId === id) handleCancelEdit();
   };
 
+  // PIN handlers
+  const handleSetPin = () => {
+    if (!pinInput || pinInput.length < 4) return alert('PIN musi mieć co najmniej 4 cyfry');
+    if (pinInput !== pinConfirm) return alert('PINy nie są zgodne');
+    // Hash PIN before storing
+    hashPin(pinInput).then(hash => {
+      localStorage.setItem('calcallegro_pin_hash', hash);
+      setStoredPin(hash);
+      setIsSettingPin(false);
+      setIsUnlocked(true);
+      setPinInput('');
+      setPinConfirm('');
+    });
+  };
+
+  const handleVerifyPin = () => {
+    if (!storedPin) return setIsSettingPin(true);
+    hashPin(pinInput).then(hash => {
+      if (hash === storedPin) {
+        setIsUnlocked(true);
+        setPinInput('');
+      } else {
+        alert('Nieprawidłowy PIN');
+      }
+    });
+  };
+
+  const handleLock = () => {
+    setIsUnlocked(false);
+  };
+
+  // Hashing helper using Web Crypto (SHA-256 -> hex)
+  const hashPin = async (pin) => {
+    try {
+      const enc = new TextEncoder();
+      const data = enc.encode(pin);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex;
+    } catch (e) {
+      console.error('Hashing failed', e);
+      return null;
+    }
+  };
+
+  const handleOpenChangePin = () => setShowChangePinModal(true);
+  const handleCloseChangePin = () => {
+    setShowChangePinModal(false);
+    setChangeCurrentPin(''); setChangeNewPin(''); setChangeConfirmPin('');
+  };
+
+  const handleApplyChangePin = async () => {
+    if (!changeCurrentPin || !changeNewPin) return alert('Wypełnij pola PIN');
+    if (changeNewPin.length < 4) return alert('Nowy PIN musi mieć min. 4 cyfry');
+    if (changeNewPin !== changeConfirmPin) return alert('Nowe PINy nie są zgodne');
+    const currentHash = await hashPin(changeCurrentPin);
+    if (currentHash !== storedPin) return alert('Błędny bieżący PIN');
+    const newHash = await hashPin(changeNewPin);
+    localStorage.setItem('calcallegro_pin_hash', newHash);
+    setStoredPin(newHash);
+    handleCloseChangePin();
+    alert('PIN został zmieniony');
+  };
+
   const handleExportToExcel = () => {
     if (savedCalculations.length === 0 || !window.XLSX) return;
 
@@ -326,6 +411,32 @@ export default function KalkulatorAllegro() {
     XLSX.writeFile(workbook, `Kalkulacje_Allegro_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
+  // Jeśli aplikacja zablokowana — pokaż ekran PIN
+  if (!isUnlocked) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0d11', color: '#e8e4d9', padding: '1.5rem' }}>
+        <div style={{ width: 440, maxWidth: '96%', background: '#121218', border: '1px solid #1e1e26', borderRadius: 12, padding: '1.25rem' }}>
+          <h2 style={{ margin: 0, fontSize: '1.1rem', color: '#f5a623' }}>{isSettingPin ? 'Ustaw PIN dostępu' : 'Wprowadź PIN'}</h2>
+          <p style={{ color: '#6a6a82', fontSize: '0.85rem' }}>{isSettingPin ? 'Ustaw 4-cyfrowy PIN, którego będziesz używać do otwierania aplikacji.' : 'Podaj PIN, aby odblokować aplikację.'}</p>
+
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+            <input type="password" inputMode="numeric" value={pinInput} onChange={e => setPinInput(e.target.value.replace(/[^0-9]/g, ''))} placeholder="PIN" style={{ flex: 1, padding: '0.6rem', borderRadius: 6, background: '#1e1e28', border: '1px solid #2d2d3d', color: '#e8e4d9', fontFamily: 'inherit' }} />
+            {isSettingPin && <input type="password" inputMode="numeric" value={pinConfirm} onChange={e => setPinConfirm(e.target.value.replace(/[^0-9]/g, ''))} placeholder="Powtórz PIN" style={{ flex: 1, padding: '0.6rem', borderRadius: 6, background: '#1e1e28', border: '1px solid #2d2d3d', color: '#e8e4d9', fontFamily: 'inherit' }} />}
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.9rem' }}>
+            {isSettingPin ? (
+              <button onClick={handleSetPin} style={{ flex: 1, background: 'linear-gradient(135deg, #4ecb71, #2a9d47)', border: 'none', padding: '0.6rem', borderRadius: 6, color: '#0d0d11', fontWeight: 700, cursor: 'pointer' }}>Ustaw PIN</button>
+            ) : (
+              <button onClick={handleVerifyPin} style={{ flex: 1, background: 'linear-gradient(135deg, #4ecb71, #2a9d47)', border: 'none', padding: '0.6rem', borderRadius: 6, color: '#0d0d11', fontWeight: 700, cursor: 'pointer' }}>Odblokuj</button>
+            )}
+            {!isSettingPin && <button onClick={() => { setIsSettingPin(true); setPinInput(''); setPinConfirm(''); }} style={{ background: '#22222e', border: '1px solid #f5a623', color: '#f5a623', padding: '0.6rem', borderRadius: 6, cursor: 'pointer' }}>Zresetuj / Zmień PIN</button>}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       minHeight: "100vh",
@@ -373,7 +484,8 @@ export default function KalkulatorAllegro() {
 
       {/* Kompaktowy Header */}
       <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-        <h1 style={{
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
+          <h1 style={{
           fontFamily: "'Syne', sans-serif",
           fontSize: "clamp(1.5rem, 4vw, 2.2rem)",
           fontWeight: 800,
@@ -383,10 +495,33 @@ export default function KalkulatorAllegro() {
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",
         }}>KALKULATOR MARŻY ALLEGRO</h1>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button onClick={handleLock} title="Zablokuj aplikację" style={{ background: '#22222e', border: 'none', color: '#f5a623', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer', fontFamily: 'inherit' }}>🔒</button>
+            <button onClick={handleOpenChangePin} title="Zmień PIN" style={{ background: '#22222e', border: '1px solid #2d2d3d', color: '#8a8a9e', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer', fontFamily: 'inherit' }}>⚙️</button>
+          </div>
+        </div>
         <p style={{ color: "#4a4a5e", fontSize: "0.7rem", margin: "0.2rem 0 0 0", letterSpacing: "0.08em" }}>
           SYSTEM OPERACYJNY WYCENY PRODUKTÓW · AUTOSAVE ACTIVE
         </p>
       </div>
+
+      {showChangePinModal && (
+        <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)' }}>
+          <div style={{ width: 480, maxWidth: '96%', background: '#121218', border: '1px solid #1e1e26', borderRadius: 12, padding: '1rem' }}>
+            <h3 style={{ margin: 0, color: '#f5a623' }}>Zmień PIN</h3>
+            <p style={{ color: '#6a6a82', marginTop: '0.35rem' }}>Podaj obecny PIN, a następnie nowy PIN (min. 4 cyfry).</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.6rem' }}>
+              <input type="password" inputMode="numeric" placeholder="Bieżący PIN" value={changeCurrentPin} onChange={e => setChangeCurrentPin(e.target.value.replace(/[^0-9]/g, ''))} style={{ padding: '0.5rem', borderRadius: 6, background: '#1e1e28', border: '1px solid #2d2d3d', color: '#e8e4d9' }} />
+              <input type="password" inputMode="numeric" placeholder="Nowy PIN" value={changeNewPin} onChange={e => setChangeNewPin(e.target.value.replace(/[^0-9]/g, ''))} style={{ padding: '0.5rem', borderRadius: 6, background: '#1e1e28', border: '1px solid #2d2d3d', color: '#e8e4d9' }} />
+              <input type="password" inputMode="numeric" placeholder="Powtórz nowy PIN" value={changeConfirmPin} onChange={e => setChangeConfirmPin(e.target.value.replace(/[^0-9]/g, ''))} style={{ padding: '0.5rem', borderRadius: 6, background: '#1e1e28', border: '1px solid #2d2d3d', color: '#e8e4d9' }} />
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+              <button onClick={handleApplyChangePin} style={{ flex: 1, background: 'linear-gradient(135deg,#4ecb71,#2a9d47)', border: 'none', padding: '0.6rem', borderRadius: 6, color: '#0d0d11', fontWeight: 700 }}>Zmień PIN</button>
+              <button onClick={handleCloseChangePin} style={{ background: '#22222e', border: '1px solid #2d2d3d', padding: '0.6rem', borderRadius: 6, color: '#8a8a9e' }}>Anuluj</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Główny obszar roboczy - podział na 2 kolumny */}
       <div className="workspace-grid">
@@ -410,7 +545,8 @@ export default function KalkulatorAllegro() {
           <div>
             <Field label="Kod EAN" value={prodEan} onChange={setProdEan} placeholder="np. 590123..." />
 
-            {/* Przycisk wywołujący automatyczne szukanie przez Apify */}
+            {/* Przycisk wywołujący automatyczne szukanie przez Apify — wyświetlany tylko gdy scraper aktywny */}
+            {edgeConfig.isScraperActive && (
             <button
               type="button"
               onClick={handleFindCheapestOffer}
@@ -436,6 +572,12 @@ export default function KalkulatorAllegro() {
                 "🔍 Sprawdź Allegro po EAN"
               )}
             </button>
+            )}
+            {!edgeConfig.isScraperActive && (
+              <div style={{ marginTop: '0.6rem', padding: '0.6rem', background: '#220f0f', border: '1px solid #e05555', borderRadius: '6px', color: '#e05555', fontSize: '0.75rem', textAlign: 'center' }}>
+                ⚠️ Scraper jest obecnie niedostępny. Wprowadź dane ręcznie.
+              </div>
+            )}
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 120px", gap: "0.75rem", alignItems: "start", marginTop: "0.75rem" }}>
               <Field label="Nazwa produktu" value={prodName} onChange={setProdName} placeholder="np. Słuchawki X" />

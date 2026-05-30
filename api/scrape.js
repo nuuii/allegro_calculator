@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { get } from '@vercel/edge-config';
 
 export default async function handler(req, res) {
   // Gwarantowane nagłówki CORS dla Twojego frontendu w React
@@ -18,10 +19,38 @@ export default async function handler(req, res) {
   // =========================================================================
   if (action === 'rates') {
     try {
+      // 1. Pobieramy kursy walut
       const response = await axios.get('https://api.frankfurter.app/latest?base=PLN&symbols=EUR,USD,GBP,CHF,CZK,RON,CNY', {
         timeout: 8000 // 8 sekund na pobranie
       });
-      return res.status(200).json(response.data);
+      
+      // 2. Pobieramy konfigurację z Edge Config
+      let smartThreshold = 44.99;
+      let isScraperActive = true;
+      
+      try {
+        const edgeSmartThreshold = await get('smartThreshold');
+        const edgeScraperActive = await get('isScraperActive');
+        
+        if (edgeSmartThreshold !== undefined && edgeSmartThreshold !== null) {
+          smartThreshold = edgeSmartThreshold;
+        }
+        if (edgeScraperActive !== undefined && edgeScraperActive !== null) {
+          isScraperActive = edgeScraperActive;
+        }
+      } catch (edgeError) {
+        // Edge Config niedostępny — używamy domyślnych wartości
+        console.warn('Edge Config niedostępny, używamy domyślnych wartości:', edgeError.message);
+      }
+      
+      // 3. Zwracamy kursy + konfigurację
+      return res.status(200).json({
+        ...response.data,
+        config: {
+          smartThreshold,
+          isScraperActive
+        }
+      });
     } catch (error) {
       console.error('Błąd pobierania walut:', error.message);
       return res.status(500).json({ error: 'Nie udało się pobrać kursów walut przez serwer proxy.' });
