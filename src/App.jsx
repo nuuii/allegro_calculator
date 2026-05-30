@@ -88,6 +88,7 @@ export default function KalkulatorAllegro() {
   const [cloudLoading, setCloudLoading] = useState(false);
   const [useCloudStorage, setUseCloudStorage] = useState(false);
   const [showCloudPanel, setShowCloudPanel] = useState(false);
+  const [toast, setToast] = useState({ message: '', type: 'info', visible: false });
 
   // Funkcja komunikująca się z Twoim serwerem /api/scrape.js
   const handleFindCheapestOffer = async () => {
@@ -205,7 +206,7 @@ export default function KalkulatorAllegro() {
       income, shipping, allegroFee, deliveryCost, netto,
       costPLN, costPlus2, profit, margin, grossMargin,
     };
-  }, [offerPrice, allegro, vat, includeDelivery, costInPLN]);
+  }, [offerPrice, allegro, vat, includeDelivery, costInPLN, allegroDiscounted]);
 
   const result = calculate();
   const isPositive = result && result.profit > 0;
@@ -412,6 +413,40 @@ export default function KalkulatorAllegro() {
     }
   };
 
+  const handleSaveCurrentToCloud = async () => {
+    if (!result) return alert('Brak obliczeń do zapisu');
+
+    const calc = {
+      name: prodName.trim() || 'Produkt bez nazwy',
+      ean: prodEan.trim() || '—',
+      supplier: supplierName.trim() || '—',
+      quantity: !isNaN(parseInt(quantity, 10)) ? parseInt(quantity, 10) : 1,
+      allegroDiscounted: allegroDiscounted,
+      offerPrice: parseFloat(offerPrice.replace(',', '.')) || 0,
+      purchaseCost: purchaseCost ? parseFloat(purchaseCost.replace(',', '.')) : 0,
+      currency: purchaseCurrency,
+      exchangeRate: purchaseCurrency !== 'PLN' ? currentRate : 1,
+      costPLN: result.costPLN || 0,
+      allegroFee: result.allegroFee || 0,
+      shipping: result.shipping || 0,
+      income: result.income || 0,
+      profit: result.profit || 0,
+      margin: result.margin || 0,
+      vat: vat
+    };
+
+    const saved = await saveCalculationToCloud(calc);
+    if (saved) {
+      // Add to local savedCalculations list so user sees it in register
+      setSavedCalculations(prev => [saved, ...prev]);
+      setToast({ message: 'Wycena zapisana w chmurze', type: 'success', visible: true });
+      setTimeout(() => setToast(t => ({ ...t, visible: false })), 2500);
+    } else {
+      setToast({ message: 'Błąd zapisu do chmury', type: 'error', visible: true });
+      setTimeout(() => setToast(t => ({ ...t, visible: false })), 2500);
+    }
+  };
+
   const handleExportToExcel = () => {
     if (savedCalculations.length === 0 || !window.XLSX) return;
 
@@ -513,6 +548,18 @@ export default function KalkulatorAllegro() {
       </div>
     );
   }
+
+  // Toast notification UI
+  const Toast = () => {
+    if (!toast.visible) return null;
+    const bg = toast.type === 'success' ? '#1a3a22' : toast.type === 'error' ? '#3a1a1a' : '#161622';
+    const color = toast.type === 'success' ? '#4ecb71' : toast.type === 'error' ? '#e05555' : '#e8e4d9';
+    return (
+      <div style={{ position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', background: bg, color, padding: '0.6rem 0.9rem', borderRadius: 8, border: '1px solid #22222e', zIndex: 2000 }}>
+        {toast.message}
+      </div>
+    );
+  };
 
   return (
     <div style={{
@@ -896,6 +943,13 @@ export default function KalkulatorAllegro() {
                   style={{ flex: 1, background: "linear-gradient(135deg, #4ecb71 0%, #2a9d47 100%)", border: "none", borderRadius: "6px", color: "#0d0d11", fontSize: "0.88rem", fontWeight: 600, padding: "0.6rem", cursor: "pointer", fontFamily: "inherit" }}
                 >
                   {editingId ? "✓ AKTUALIZUJ WYCENĘ" : "＋ ZAPISZ DO LISTY ZBIORCZEJ"}
+                </button>
+                <button
+                  onClick={handleSaveCurrentToCloud}
+                  disabled={!result}
+                  style={{ background: '#1e1e28', border: '1px solid #2d2d3d', color: '#8a8a9e', borderRadius: '6px', fontSize: '0.88rem', padding: '0.6rem', cursor: result ? 'pointer' : 'not-allowed', fontFamily: 'inherit', minWidth: '160px' }}
+                >
+                  ☁️ ZAPISZ W CHMURZE
                 </button>
                 {editingId && (
                   <button
