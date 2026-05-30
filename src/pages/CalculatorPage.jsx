@@ -39,7 +39,7 @@ export default function CalculatorPage({
   handleAddToList,
   handleRemoveFromList,
   handleExportToExcel,
-  handleSaveCurrentToCloud,
+  onSaveWholeOffer,
   currencies,
   vatOptions,
   formatPLN,
@@ -254,13 +254,6 @@ export default function CalculatorPage({
               >
                 {editingId ? "✓ AKTUALIZUJ WYCENĘ" : "＋ ZAPISZ DO LISTY ZBIORCZEJ"}
               </button>
-              <button
-                onClick={handleSaveCurrentToCloud}
-                disabled={!result}
-                style={{ background: '#1e1e28', border: '1px solid #2d2d3d', color: '#8a8a9e', borderRadius: '6px', fontSize: '0.88rem', padding: '0.6rem', cursor: result ? 'pointer' : 'not-allowed', fontFamily: 'inherit', minWidth: '160px' }}
-              >
-                ☁️ ZAPISZ W CHMURZE
-              </button>
               {editingId && (
                 <button
                   onClick={handleCancelEdit}
@@ -319,6 +312,24 @@ export default function CalculatorPage({
                 ))}
               </tbody>
             </table>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+              <button
+                onClick={onSaveWholeOffer}
+                style={{
+                  background: 'linear-gradient(135deg, #4ecb71 0%, #28a745 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.85rem 1.25rem',
+                  fontSize: '0.95rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  boxShadow: '0 6px 18px rgba(40, 167, 69, 0.2)'
+                }}
+              >
+                ☁️ Zapisz całą ofertę w chmurze
+              </button>
+            </div>
           </div>
         )}
       </div>

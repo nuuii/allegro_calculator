@@ -57,6 +57,8 @@ export default function App() {
   const [ratesError, setRatesError] = useState(null);
   const [ratesDate, setRatesDate] = useState(null);
   const [savedCalculations, setSavedCalculations] = useState([]);
+  const [savedOffers, setSavedOffers] = useState([]);
+  const [activeTab, setActiveTab] = useState('kalkulator');
   const [editingId, setEditingId] = useState(null);
   const [eanLoading, setEanLoading] = useState(false);
 
@@ -108,10 +110,6 @@ export default function App() {
   const [changeConfirmPin, setChangeConfirmPin] = useState("");
 
   const [edgeConfig, setEdgeConfig] = useState({ smartThreshold: 44.99, isScraperActive: true });
-  const [cloudCalculations, setCloudCalculations] = useState([]);
-  const [cloudLoading, setCloudLoading] = useState(false);
-  const [useCloudStorage, setUseCloudStorage] = useState(false);
-  const [showCloudPanel, setShowCloudPanel] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'info', visible: false });
 
   const activeProfile = profiles.find(profile => profile.id === activeProfileId) || null;
@@ -271,11 +269,9 @@ export default function App() {
 
     if (editingId) {
       setSavedCalculations(prev => prev.map(item => item.id === editingId ? newItem : item));
-      if (useCloudStorage) updateCloudCalculation(editingId, newItem);
       setEditingId(null);
     } else {
       setSavedCalculations(prev => [newItem, ...prev]);
-      if (useCloudStorage) saveCalculationToCloud(newItem);
     }
     setProdName("");
     setProdEan("");
@@ -287,7 +283,6 @@ export default function App() {
 
   const handleRemoveFromList = (id) => {
     setSavedCalculations(prev => prev.filter(item => item.id !== id));
-    if (useCloudStorage) deleteCloudCalculation(id);
     if (editingId === id) handleCancelEdit();
   };
 
@@ -389,106 +384,134 @@ export default function App() {
     setTimeout(() => setToast(t => ({ ...t, visible: false })), 2500);
   };
 
-  const fetchCloudCalculations = async () => {
-    setCloudLoading(true);
+  const fetchSavedOffers = async () => {
     try {
       const res = await fetch('/api/calculations');
       const json = await res.json();
       if (json.success) {
-        setCloudCalculations(json.data);
+        setSavedOffers(json.data);
       }
     } catch (err) {
-      console.error('Błąd pobierania wycen z chmury:', err);
-    } finally {
-      setCloudLoading(false);
+      console.error('Błąd pobierania zapisanych ofert z chmury:', err);
     }
   };
 
-  const saveCalculationToCloud = async (calculation) => {
+  const handleSaveWholeOfferToCloud = async (itemsList) => {
+    if (!itemsList || itemsList.length === 0) {
+      return alert('Twoja tabela kalkulacji jest pusta. Dodaj najpierw produkty.');
+    }
+
+    const offerName = prompt('Wpisz nazwę dla tej kalkulacji/oferty:');
+    if (offerName === null) return;
+
     try {
       const res = await fetch('/api/calculations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ calculation })
+        body: JSON.stringify({
+          offerName,
+          items: itemsList,
+          createdBy: activeProfile?.name || 'Anonim'
+        })
       });
       const json = await res.json();
       if (json.success) {
-        setCloudCalculations(prev => [json.data, ...prev]);
-        return json.data;
+        setToast({ message: 'Cała oferta została zapisana w chmurze!', type: 'success', visible: true });
+        setTimeout(() => setToast(t => ({ ...t, visible: false })), 2500);
+        fetchSavedOffers();
+      } else {
+        alert('Błąd zapisu: ' + json.error);
       }
     } catch (err) {
-      console.error('Błąd zapisywania wyceny:', err);
+      console.error('Błąd zapisu całej oferty:', err);
+      alert('Błąd połączenia z serwerem. Spróbuj ponownie.');
     }
   };
 
-  const updateCloudCalculation = async (id, updates) => {
-    try {
-      const res = await fetch(`/api/calculations?id=${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ calculation: updates })
-      });
-      const json = await res.json();
-      if (json.success) {
-        setCloudCalculations(prev => prev.map(c => c.id === id ? json.data : c));
-        return json.data;
-      }
-    } catch (err) {
-      console.error('Błąd aktualizacji wyceny:', err);
-    }
-  };
-
-  const deleteCloudCalculation = async (id) => {
+  const handleDeleteOffer = async (id) => {
+    if (!window.confirm('Czy na pewno chcesz trwale usunąć tę ofertę z chmury?')) return;
     try {
       const res = await fetch(`/api/calculations?id=${id}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
-        setCloudCalculations(prev => prev.filter(c => c.id !== id));
+        setSavedOffers(prev => prev.filter(offer => offer.id !== id));
       }
     } catch (err) {
-      console.error('Błąd usuwania wyceny:', err);
+      console.error('Błąd usuwania oferty:', err);
+      alert('Nie udało się usunąć oferty.');
     }
   };
 
-  const handleSaveCurrentToCloud = async () => {
-    if (!result) return alert('Brak obliczeń do zapisu');
-    const calc = {
-      name: prodName.trim() || 'Produkt bez nazwy',
-      ean: prodEan.trim() || '—',
-      supplier: supplierName.trim() || '—',
-      quantity: parseInt(quantity, 10) || 1,
-      allegroDiscounted,
-      offerPrice: parseFloat(offerPrice.replace(',', '.')) || 0,
-      purchaseCost: purchaseCost ? parseFloat(purchaseCost.replace(',', '.')) : 0,
-      currency: purchaseCurrency,
-      exchangeRate: purchaseCurrency !== 'PLN' ? currentRate : 1,
-      costPLN: result.costPLN || 0,
-      allegroFee: result.allegroFee || 0,
-      shipping: result.shipping || 0,
-      income: result.income || 0,
-      profit: result.profit || 0,
-      margin: result.margin || 0,
-      vat,
-      createdBy: activeProfile?.name || 'Anonim'
-    };
-
-    try {
-      const res = await fetch('/api/calculations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ calculation: calc, createdBy: activeProfile?.name || 'Anonim' })
-      });
-      const json = await res.json();
-      if (json.success) {
-        setCloudCalculations(p => [json.data, ...p]);
-        setSavedCalculations(prev => [json.data, ...prev]);
-        setToast({ message: 'Wycena zapisana w chmurze', type: 'success', visible: true });
-        setTimeout(() => setToast(t => ({ ...t, visible: false })), 2500);
-      }
-    } catch (err) {
-      setToast({ message: 'Błąd zapisu do chmury', type: 'error', visible: true });
-      setTimeout(() => setToast(t => ({ ...t, visible: false })), 2500);
+  const handleExportOfferToExcel = (offer) => {
+    if (!window.XLSX) {
+      alert('XLSX library nie jest dostępny. Odśwież stronę i spróbuj ponownie.');
+      return;
     }
+    const XLSX = window.XLSX;
+    const headers = ['Lp.', 'Nazwa produktu', 'Ilość', 'EAN / SKU', 'Dostawca', 'Cena oferty (Brutto PLN)', 'Stawka VAT (%)', 'Prowizja obniżona', 'Koszt zakupu (Waluta)', 'Waluta zakupu', 'Kurs waluty', 'Koszt zakupu (PLN)', 'Prowizja Allegro (PLN)', 'Koszt wysyłki (PLN)', 'Wpływ operacyjny (Netto PLN)', 'Zysk czysty (PLN)', 'Marża'];
+    
+    const dataForExcel = offer.items.map((item, index) => ({
+      'Lp.': index + 1,
+      'Nazwa produktu': item.name,
+      'Ilość': !isNaN(item.quantity) ? item.quantity : null,
+      'EAN / SKU': item.ean,
+      'Dostawca': item.supplier,
+      'Cena oferty (Brutto PLN)': typeof item.offerPrice === 'number' ? item.offerPrice : Number(item.offerPrice) || 0,
+      'Stawka VAT (%)': item.vat,
+      'Prowizja obniżona': item.allegroDiscounted ? 'TAK' : 'NIE',
+      'Koszt zakupu (Waluta)': typeof item.purchaseCost === 'number' ? item.purchaseCost : Number(item.purchaseCost) || 0,
+      'Waluta zakupu': item.currency,
+      'Kurs waluty': item.exchangeRate ? Math.round(item.exchangeRate * 10000) / 10000 : 1,
+      'Koszt zakupu (PLN)': item.costPLN || 0,
+      'Prowizja Allegro (PLN)': item.allegroFee || 0,
+      'Koszt wysyłki (PLN)': item.shipping || 0,
+      'Wpływ operacyjny (Netto PLN)': item.income || 0,
+      'Zysk czysty (PLN)': typeof item.profit === 'number' ? item.profit : (item.profit ? Number(item.profit) : null),
+      'Marża': typeof item.margin === 'number' ? item.margin : (item.margin ? Number(item.margin) : null)
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataForExcel, { header: headers });
+    worksheet['!cols'] = [
+      { wch: 5 }, { wch: 36 }, { wch: 8 }, { wch: 14 }, { wch: 18 },
+      { wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 10 },
+      { wch: 10 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 18 }, { wch: 14 }, { wch: 10 }
+    ];
+    worksheet['!freeze'] = { ySplit: 1 };
+    worksheet['!autofilter'] = { ref: worksheet['!ref'] };
+    
+    const range = XLSX.utils.decode_range(worksheet['!ref']);
+    const colIndex = (name) => headers.indexOf(name);
+    for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+      const setFmt = (colName, fmt) => {
+        const C = colIndex(colName);
+        if (C < 0) return;
+        const addr = XLSX.utils.encode_cell({ r: R, c: C });
+        const cell = worksheet[addr];
+        if (cell && typeof cell.v === 'number') cell.z = fmt;
+      };
+      setFmt('Cena oferty (Brutto PLN)', '#,##0.00');
+      setFmt('Koszt zakupu (PLN)', '#,##0.00');
+      setFmt('Prowizja Allegro (PLN)', '#,##0.00');
+      setFmt('Koszt wysyłki (PLN)', '#,##0.00');
+      setFmt('Wpływ operacyjny (Netto PLN)', '#,##0.00');
+      setFmt('Zysk czysty (PLN)', '#,##0.00');
+      setFmt('Kurs waluty', '#,##0.0000');
+      setFmt('Marża', '0.00%');
+      setFmt('Ilość', '0');
+      setFmt('Stawka VAT (%)', '0');
+    }
+    
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Oferta: ' + offer.offerName.slice(0, 20));
+    XLSX.writeFile(workbook, `Oferta_${offer.offerName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  const handleCopyEAN = (ean) => {
+    if (ean === '—') return;
+    navigator.clipboard.writeText(ean).then(() => {
+      setToast({ message: `EAN ${ean} skopiowany do schowka!`, type: 'success', visible: true });
+      setTimeout(() => setToast(t => ({ ...t, visible: false })), 2000);
+    });
   };
 
   const handleExportToExcel = () => {
@@ -595,63 +618,153 @@ export default function App() {
         <nav style={{ display: "flex", gap: "2rem", background: "#121218", border: "1px solid #1e1e26", padding: "0.75rem 2rem", borderRadius: "10px", width: "100%", maxWidth: "1140px", marginBottom: "1.5rem", alignItems: "center" }}>
           <strong style={{ color: "#f5a623", fontFamily: "'Syne', sans-serif" }}>Allegro Calc v2</strong>
           <div style={{ display: "flex", gap: "1rem" }}>
-            <Link to="/" style={{ color: "#e8e4d9", textDecoration: "none", fontSize: "0.85rem" }}>🖩 Kalkulator</Link>
+            <Link
+              to="/"
+              onClick={() => setActiveTab('kalkulator')}
+              style={{ color: "#e8e4d9", textDecoration: "none", fontSize: "0.85rem", fontWeight: activeTab === 'kalkulator' ? 700 : 400 }}
+            >
+              🖩 Kalkulator
+            </Link>
+            <Link
+              to="/"
+              onClick={() => { setActiveTab('oferty'); fetchSavedOffers(); }}
+              style={{ color: "#e8e4d9", textDecoration: "none", fontSize: "0.85rem", fontWeight: activeTab === 'oferty' ? 700 : 400 }}
+            >
+              📂 Zapisane oferty
+            </Link>
             <Link to="/analityka" style={{ color: "#e8e4d9", textDecoration: "none", fontSize: "0.85rem" }}>📊 Analityka</Link>
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: "0.5rem" }}>
             <button onClick={() => setIsUnlocked(false)} title="Zablokuj" style={{ background: '#22222e', border: 'none', color: '#f5a623', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer' }}>🔒</button>
             <button onClick={handleOpenChangePin} title="Zmień PIN" style={{ background: '#22222e', border: '1px solid #2d2d3d', color: '#8a8a9e', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer' }}>⚙️</button>
             <button onClick={() => setShowProfileModal(true)} title="Profile" style={{ background: '#22222e', border: '1px solid #2d2d3d', color: '#8a8a9e', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer' }}>👤</button>
-            <button onClick={() => { setShowCloudPanel(!showCloudPanel); if (!showCloudPanel) fetchCloudCalculations(); }} title="Chmura" style={{ background: '#22222e', border: '1px solid #2d2d3d', color: '#8a8a9e', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer' }}>☁️</button>
           </div>
         </nav>
 
         <Routes>
           <Route path="/" element={
-            <CalculatorPage
-              prodName={prodName}
-              setProdName={setProdName}
-              prodEan={prodEan}
-              setProdEan={setProdEan}
-              offerPrice={offerPrice}
-              setOfferPrice={setOfferPrice}
-              purchaseCost={purchaseCost}
-              setPurchaseCost={setPurchaseCost}
-              quantity={quantity}
-              setQuantity={setQuantity}
-              allegroDiscounted={allegroDiscounted}
-              setAllegroDiscounted={setAllegroDiscounted}
-              supplierName={supplierName}
-              setSupplierName={setSupplierName}
-              purchaseCurrency={purchaseCurrency}
-              setPurchaseCurrency={setPurchaseCurrency}
-              allegro={allegro}
-              setAllegro={setAllegro}
-              vat={vat}
-              setVat={setVat}
-              includeDelivery={includeDelivery}
-              setIncludeDelivery={setIncludeDelivery}
-              ratesLoading={ratesLoading}
-              currentRate={currentRate}
-              eanLoading={eanLoading}
-              edgeConfig={edgeConfig}
-              result={result}
-              isPositive={isPositive}
-              isNegative={isNegative}
-              editingId={editingId}
-              savedCalculations={savedCalculations}
-              handleFindCheapestOffer={handleFindCheapestOffer}
-              handleEditItem={handleEditItem}
-              handleCancelEdit={handleCancelEdit}
-              handleAddToList={handleAddToList}
-              handleRemoveFromList={handleRemoveFromList}
-              handleSaveCurrentToCloud={handleSaveCurrentToCloud}
-              handleExportToExcel={handleExportToExcel}
-              currencies={CURRENCIES}
-              vatOptions={VAT_OPTIONS}
-              formatPLN={formatPLN}
-              formatPct={formatPct}
-            />
+            activeTab === 'oferty' ? (
+              <div style={{ width: '100%', maxWidth: '1140px', padding: '1.25rem', background: '#121218', borderRadius: '12px', border: '1px solid #1e1e26', color: '#e8e4d9' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <div>
+                    <h2 style={{ margin: 0, color: '#f5a623' }}>📂 Zapisane oferty</h2>
+                    <p style={{ margin: '0.35rem 0 0', color: '#8a8a9e' }}>Przeglądaj pełne historyczne zestawienia i pobieraj je po nazwie oferty.</p>
+                  </div>
+                  <button
+                    onClick={() => { setActiveTab('kalkulator'); }}
+                    style={{ background: '#22222e', border: '1px solid #2d2d3d', borderRadius: '8px', padding: '0.75rem 1rem', color: '#e8e4d9', cursor: 'pointer' }}
+                  >
+                    ← Wróć do kalkulatora
+                  </button>
+                </div>
+                {savedOffers.length === 0 ? (
+                  <div style={{ color: '#6a6a82', padding: '2rem', textAlign: 'center', border: '1px dashed #2d2d3d', borderRadius: '12px' }}>
+                    Brak zapisanych ofert w chmurze. Zapisz swoją pierwszą ofertę z poziomu kalkulatora.
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '1rem' }}>
+                    {savedOffers.map((offer) => (
+                      <div key={offer.id} style={{ background: '#161622', border: '1px solid #2d2d3d', borderRadius: '12px', padding: '1rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                          <div>
+                            <h3 style={{ margin: 0, color: '#fff' }}>{offer.offerName}</h3>
+                            <div style={{ color: '#8a8a9e', fontSize: '0.85rem', marginTop: '0.35rem' }}>
+                              Utworzono: {new Date(offer.createdAt).toLocaleString('pl-PL')} | Autor: <strong style={{ color: '#f5a623' }}>{offer.createdBy}</strong>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                              onClick={() => handleExportOfferToExcel(offer)}
+                              style={{ background: '#f5a623', color: '#0d0d11', border: 'none', borderRadius: '8px', padding: '0.7rem 1rem', cursor: 'pointer', fontWeight: 600 }}
+                            >
+                              📥 Eksportuj
+                            </button>
+                            <button
+                              onClick={() => handleDeleteOffer(offer.id)}
+                              style={{ background: '#e05555', color: '#fff', border: 'none', borderRadius: '8px', padding: '0.7rem 1rem', cursor: 'pointer' }}
+                            >
+                              🗑️ Usuń
+                            </button>
+                          </div>
+                        </div>
+                        <div style={{ overflowX: 'auto', marginTop: '1rem' }}>
+                          <table className="calc-table" style={{ width: '100%' }}>
+                            <thead>
+                              <tr>
+                                <th>Produkt</th><th>EAN / SKU</th><th>Dostawca</th><th>Ilość</th><th>Cena</th><th>Zysk</th><th>Marża</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {offer.items.map((item, index) => (
+                                <tr key={index}>
+                                  <td>{item.name}</td>
+                                  <td
+                                    onClick={() => handleCopyEAN(item.ean)}
+                                    style={{ cursor: item.ean !== '—' ? 'pointer' : 'default', color: item.ean !== '—' ? '#f5a623' : '#6a6a82', fontWeight: item.ean !== '—' ? 600 : 400 }}
+                                  >
+                                    {item.ean}
+                                  </td>
+                                  <td>{item.supplier}</td>
+                                  <td>{item.quantity}</td>
+                                  <td>{formatPLN(item.offerPrice)}</td>
+                                  <td style={{ color: item.profit > 0 ? '#4ecb71' : '#e05555' }}>{formatPLN(item.profit)}</td>
+                                  <td style={{ color: item.margin > 0 ? '#4ecb71' : '#e05555' }}>{formatPct(item.margin)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <CalculatorPage
+                prodName={prodName}
+                setProdName={setProdName}
+                prodEan={prodEan}
+                setProdEan={setProdEan}
+                offerPrice={offerPrice}
+                setOfferPrice={setOfferPrice}
+                purchaseCost={purchaseCost}
+                setPurchaseCost={setPurchaseCost}
+                quantity={quantity}
+                setQuantity={setQuantity}
+                allegroDiscounted={allegroDiscounted}
+                setAllegroDiscounted={setAllegroDiscounted}
+                supplierName={supplierName}
+                setSupplierName={setSupplierName}
+                purchaseCurrency={purchaseCurrency}
+                setPurchaseCurrency={setPurchaseCurrency}
+                allegro={allegro}
+                setAllegro={setAllegro}
+                vat={vat}
+                setVat={setVat}
+                includeDelivery={includeDelivery}
+                setIncludeDelivery={setIncludeDelivery}
+                ratesLoading={ratesLoading}
+                currentRate={currentRate}
+                eanLoading={eanLoading}
+                edgeConfig={edgeConfig}
+                result={result}
+                isPositive={isPositive}
+                isNegative={isNegative}
+                editingId={editingId}
+                savedCalculations={savedCalculations}
+                handleFindCheapestOffer={handleFindCheapestOffer}
+                handleEditItem={handleEditItem}
+                handleCancelEdit={handleCancelEdit}
+                handleAddToList={handleAddToList}
+                handleRemoveFromList={handleRemoveFromList}
+                handleExportToExcel={handleExportToExcel}
+                onSaveWholeOffer={() => handleSaveWholeOfferToCloud(savedCalculations)}
+                currencies={CURRENCIES}
+                vatOptions={VAT_OPTIONS}
+                formatPLN={formatPLN}
+                formatPct={formatPct}
+              />
+            )
           } />
           <Route path="/analityka" element={<AnalyticsPage />} />
         </Routes>
@@ -679,51 +792,6 @@ export default function App() {
             handleSwitchProfile={handleSwitchProfile}
             setShowProfileModal={setShowProfileModal}
           />
-        )}
-
-        {showCloudPanel && (
-          <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', zIndex: 1000 }}>
-            <div style={{ width: '90vw', maxWidth: 900, maxHeight: '80vh', background: '#121218', border: '1px solid #1e1e26', borderRadius: 12, padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h3 style={{ margin: 0, color: '#f5a623' }}>☁️ Wyceny w chmurze (Vercel KV)</h3>
-                <button onClick={() => setShowCloudPanel(false)} style={{ background: 'transparent', border: 'none', color: '#8a8a9e', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#8a8a9e', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={useCloudStorage} onChange={e => setUseCloudStorage(e.target.checked)} />
-                  Synchronizuj lokalne wyceny do chmury przy zapisie
-                </label>
-              </div>
-              {cloudLoading ? (
-                <div style={{ textAlign: 'center', color: '#6a6a82' }}>⟳ Ładowanie wycen...</div>
-              ) : cloudCalculations.length === 0 ? (
-                <div style={{ textAlign: 'center', color: '#4a4a5e' }}>Brak wycen w chmurze. Włącz synchronizację powyżej i zapisz wycenę.</div>
-              ) : (
-                <div style={{ overflowY: 'auto', flex: 1 }}>
-                  {cloudCalculations.map(calc => (
-                    <div key={calc.id} style={{ background: '#1e1e26', border: '1px solid #2d2d3d', borderRadius: 8, padding: '1rem', marginBottom: '0.75rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ color: '#e8e4d9', fontWeight: 500 }}>{calc.name}</div>
-                          <div style={{ color: '#8a8a9e', fontSize: '0.85rem', marginTop: '0.25rem' }}>
-                            EAN: {calc.ean} | Ilość: {calc.quantity} | Cena: {formatPLN(calc.offerPrice)}
-                          </div>
-                          <div style={{ color: calc.profit > 0 ? '#4ecb71' : '#e05555', fontSize: '0.85rem', marginTop: '0.25rem' }}>
-                            Zysk: {formatPLN(calc.profit)} | Marża: {formatPct(calc.margin)}
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#6a6a82', fontSize: '0.75rem', marginTop: '0.5rem' }}>
-                            <span>👤 Autor: <strong style={{ color: '#f5a623' }}>{calc.createdBy || 'Anonim'}</strong></span>
-                            <span>{calc.createdAt ? new Date(calc.createdAt).toLocaleString('pl-PL') : 'Brak daty'}</span>
-                          </div>
-                        </div>
-                        <button onClick={() => deleteCloudCalculation(calc.id)} style={{ background: 'transparent', border: 'none', color: '#e05555', cursor: 'pointer', fontSize: '1.2rem' }}>🗑️</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
         )}
 
         <Toast />
