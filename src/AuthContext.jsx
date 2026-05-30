@@ -205,6 +205,16 @@ export const AuthProvider = ({ children }) => {
       return false;
     }
 
+    if (targetProfile.id === activeProfileId) {
+      const nextProfiles = profiles.filter(profile => profile.id !== profileId);
+      saveProfiles(nextProfiles);
+      setActiveProfileId('');
+      setSelectedProfileId(nextProfiles[0]?.id || '');
+      setIsUnlocked(false);
+      setToast({ message: `Usunięto profil ${targetProfile.name}. Klucz dostępu pozostaje wykorzystany.`, type: 'success', visible: true });
+      return true;
+    }
+
     if (targetProfile.accessKeyHash || targetProfile.accessKey) {
       const releaseResponse = await fetch('/api/access-keys', {
         method: 'POST',
@@ -235,6 +245,26 @@ export const AuthProvider = ({ children }) => {
     }
 
     setToast({ message: `Usunięto profil ${targetProfile.name}. Klucz wrócił do puli, jeśli był przypisany.`, type: 'success', visible: true });
+    return true;
+  };
+
+  const handleDeleteOwnProfile = () => {
+    if (!activeProfile) {
+      setToast({ message: 'Brak aktywnego profilu do usunięcia.', type: 'error', visible: true });
+      return false;
+    }
+
+    if (isBootstrapAdminProfile(activeProfile)) {
+      setToast({ message: 'Nie można usunąć głównego administratora.', type: 'error', visible: true });
+      return false;
+    }
+
+    const nextProfiles = profiles.filter(profile => profile.id !== activeProfile.id);
+    saveProfiles(nextProfiles);
+    setActiveProfileId('');
+    setSelectedProfileId(nextProfiles[0]?.id || '');
+    setIsUnlocked(false);
+    setToast({ message: `Usunięto profil ${activeProfile.name}. Klucz dostępu został wykorzystany i nie wraca do puli.`, type: 'success', visible: true });
     return true;
   };
 
@@ -311,7 +341,8 @@ export const AuthProvider = ({ children }) => {
     profiles, activeProfile, activeProfileId, isUnlocked, isAdmin, logout,
     profileAuthMode, setProfileAuthMode, selectedProfileId, setSelectedProfileId,
     handleCreateProfile, handleLoginProfile, handleSwitchProfile, handleApplyChangePin,
-    handleSetProfileAdmin, handleRenameProfile, handleDeleteProfile, isBootstrapAdminProfile
+    handleSetProfileAdmin, handleRenameProfile, handleDeleteProfile, handleDeleteOwnProfile,
+    isBootstrapAdminProfile
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

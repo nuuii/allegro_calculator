@@ -815,6 +815,35 @@ a:hover {
   color: #e05555;
 }
 
+.danger-zone {
+  align-items: center;
+  background: rgba(224, 85, 85, 0.08);
+  border: 1px solid rgba(224, 85, 85, 0.28);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 0.35rem;
+  padding: 0.85rem;
+}
+
+.danger-zone strong,
+.danger-zone span {
+  display: block;
+}
+
+.danger-zone strong {
+  color: #ffd0d0;
+  font-size: 0.88rem;
+}
+
+.danger-zone span {
+  color: #f0b1b1;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  margin-top: 0.2rem;
+}
+
 .app-toast {
   position: fixed;
   right: 1.25rem;
@@ -1452,6 +1481,10 @@ a:hover {
   .modal-actions .save-offer-button,
   .modal-actions .secondary-action {
     width: 100%;
+  }
+
+  .danger-zone {
+    grid-template-columns: 1fr;
   }
 
   .results-register__header,

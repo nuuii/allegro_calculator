@@ -65,7 +65,7 @@ const ProfileSwitchCard = ({ profile, isActive, onSwitch }) => {
 export default function SettingsPage({ profiles, activeProfile, edgeConfig, onLogout }) {
   const {
     handleApplyChangePin, handleSwitchProfile, isAdmin, handleSetProfileAdmin,
-    handleRenameProfile, handleDeleteProfile, isBootstrapAdminProfile
+    handleRenameProfile, handleDeleteProfile, handleDeleteOwnProfile, isBootstrapAdminProfile
   } = useAuth();
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
@@ -82,6 +82,15 @@ export default function SettingsPage({ profiles, activeProfile, edgeConfig, onLo
       setConfirmPin('');
     }
   };
+
+  const handleDeleteOwnAccount = () => {
+    const confirmed = window.confirm(
+      'Usunąć aktualny profil? Ten klucz dostępu pozostanie wykorzystany i nie wróci do puli dostępnych kluczy.'
+    );
+    if (confirmed) handleDeleteOwnProfile();
+  };
+
+  const activeProfileIsBootstrapAdmin = isBootstrapAdminProfile(activeProfile);
 
   return (
     <div className="settings-page">
@@ -114,6 +123,21 @@ export default function SettingsPage({ profiles, activeProfile, edgeConfig, onLo
             >
               Wyloguj i zablokuj aplikację
             </button>
+            <div className="danger-zone">
+              <div>
+                <strong>Usuń moje konto</strong>
+                <span>Profil zostanie usunięty z tej aplikacji, a użyty klucz pozostanie spalony.</span>
+              </div>
+              <button
+                type="button"
+                className="secondary-action secondary-action--danger"
+                onClick={handleDeleteOwnAccount}
+                disabled={activeProfileIsBootstrapAdmin}
+                title={activeProfileIsBootstrapAdmin ? 'Główne konto administratora jest chronione' : undefined}
+              >
+                Usuń moje konto
+              </button>
+            </div>
           </SettingsCard>
 
           <SettingsCard title="Konfiguracja Chmury i Scrapera">
