@@ -1,36 +1,85 @@
+/* === WORKSPACE GRID LAYOUT === */
+.workspace-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 1140px;
+  margin: 0 auto 1.5rem;
+}
+
+/* === RESULT ROW STYLING === */
+.row-result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #1e1e26;
+  gap: 1rem;
+}
+
+.row-result span:first-child {
+  flex: 1;
+  font-size: 0.75rem;
+  color: #8a8a9e;
+}
+
+.row-result span:last-child {
+  font-size: 0.85rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.row-result:last-child {
+  border-bottom: none;
+}
+
+/* === TABLE STYLING === */
 .calc-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.8rem;
-  white-space: nowrap;
 }
 
 .calc-table th {
   font-size: 0.7rem;
   font-weight: 500;
   color: #6a6a82;
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem;
   border-bottom: 2px solid #1e1e26;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  text-align: left;
+}
+
+.calc-table th:nth-child(5),
+.calc-table th:nth-child(6),
+.calc-table th:nth-child(7),
+.calc-table th:nth-child(8),
+.calc-table th:nth-child(9),
+.calc-table th:nth-child(10) {
+  text-align: right;
 }
 
 .calc-table td {
   padding: 0.75rem;
   border-bottom: 1px solid #1e1e26;
   vertical-align: middle;
+  text-align: left;
+}
+
+.calc-table td:nth-child(5),
+.calc-table td:nth-child(6),
+.calc-table td:nth-child(7),
+.calc-table td:nth-child(8),
+.calc-table td:nth-child(9),
+.calc-table td:nth-child(10) {
+  text-align: right;
 }
 
 .calc-table tbody tr:last-child td {
   border-bottom: none;
-}
-
-.workspace-grid {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 1.5rem;
-  width: 100%;
-  margin-bottom: 1.5rem;
 }
 
 

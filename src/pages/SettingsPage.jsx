@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '../AuthContext.jsx';
 
 const SettingsCard = ({ title, children }) => (
   <div style={{ background: "#121218", border: "1px solid #1e1e26", borderRadius: "12px", padding: "1.5rem" }}>
@@ -68,13 +69,14 @@ const ProfileSwitchCard = ({ profile, isActive, onSwitch }) => {
   );
 };
 
-export default function SettingsPage({ profiles, activeProfile, edgeConfig, onApplyChangePin, onSwitchProfile, onLogout }) {
+export default function SettingsPage({ profiles, activeProfile, edgeConfig, onLogout }) {
+  const { handleApplyChangePin, handleSwitchProfile } = useAuth();
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
 
   const handleChangePin = async () => {
-    const success = await onApplyChangePin(currentPin, newPin, confirmPin);
+    const success = await handleApplyChangePin(currentPin, newPin, confirmPin);
     if (success) {
       setCurrentPin('');
       setNewPin('');
@@ -146,7 +148,7 @@ export default function SettingsPage({ profiles, activeProfile, edgeConfig, onAp
                 key={profile.id}
                 profile={profile}
                 isActive={profile.id === activeProfile?.id}
-                onSwitch={onSwitchProfile}
+                onSwitch={handleSwitchProfile}
               />
             ))}
           </div>

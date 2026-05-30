@@ -19,23 +19,21 @@ const CURRENCIES = [
 
 const VAT_OPTIONS = [5, 8, 23];
 
-// Helper functions that might be needed in CalculatorPage
 const formatPLN = (value) => {
-  if (typeof value !== 'number' || isNaN(value)) return '0,00 zł';
-  return `${value.toFixed(2).replace('.', ',')} zł`;
+  if (value === null || value === undefined || isNaN(value)) return "—";
+  return value.toFixed(2).replace(".", ",") + " zł";
 };
 
 const formatPct = (value) => {
-  if (typeof value !== 'number' || isNaN(value)) return '0,00%';
-  return `${value.toFixed(2).replace('.', ',')}%`;
+  if (value === null || value === undefined || isNaN(value)) return "—";
+  return (value * 100).toFixed(2).replace(".", ",") + " %";
 };
 
 function AppContent() {
   const { rates, ratesLoading, edgeConfig, fetchRatesData, setToast } = useApp();
-  const { profiles, activeProfile, logout, handleApplyChangePin, handleSwitchProfile } = useAuth();
+  const { profiles, activeProfile, logout } = useAuth();
   const location = useLocation();
 
-  // WYKORZYSTUJEMY NOWY HOOK - Usuwamy dublowanie stanów z App.jsx!
   const calc = useCalculator({ rates, activeProfile });
 
   const [savedOffers, setSavedOffers] = useState(() => {
@@ -45,7 +43,8 @@ function AppContent() {
 
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showChangePinModal, setShowChangePinModal] = useState(false);
-  
+  const [eanLoading, setEanLoading] = useState(false);
+
   const activeTab = location.pathname === '/saved' ? 'oferty' : location.pathname === '/ustawienia' ? 'ustawienia' : 'kalkulator';
 
   useEffect(() => {
@@ -61,8 +60,6 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('calcallegro_saved_offers', JSON.stringify(savedOffers));
   }, [savedOffers]);
-
-  const [eanLoading, setEanLoading] = useState(false);
 
   const handleFindCheapestOffer = async () => {
     if (!calc.prodEan.trim()) {
@@ -218,8 +215,7 @@ function AppContent() {
         <Route path="/analityka" element={<AnalyticsPage />} />
         <Route path="/ustawienia" element={
           <SettingsPage
-            profiles={profiles} activeProfile={activeProfile} edgeConfig={edgeConfig}
-            onApplyChangePin={handleApplyChangePin} onSwitchProfile={handleSwitchProfile} onLogout={logout}
+            profiles={profiles} activeProfile={activeProfile} edgeConfig={edgeConfig} onLogout={logout}
           />} />
       </Routes>
 
