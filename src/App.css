@@ -25,6 +25,14 @@
   border-bottom: none;
 }
 
+.workspace-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 1.5rem;
+  width: 100%;
+  margin-bottom: 1.5rem;
+}
+
 
 .counter {
   font-size: 16px;
