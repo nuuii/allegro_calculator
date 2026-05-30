@@ -18,10 +18,10 @@ export function ProfileAuthScreen() {
     <div className="auth-screen">
       <section className="auth-panel" aria-labelledby="auth-title">
         <div className="auth-brand">
-          <span className="app-brand__mark">PD</span>
+          <span className="app-brand__mark">AC</span>
           <div>
-            <strong>ProfitDesk</strong>
-            <small>Allegro margin operations</small>
+            <strong>Allegro Calc v2</strong>
+            <small>Kalkulator ofert i marż</small>
           </div>
         </div>
 

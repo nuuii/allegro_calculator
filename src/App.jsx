@@ -276,10 +276,10 @@ function AppContent() {
     <div className="app-shell">
       <header className="app-topbar">
         <Link to="/" className="app-brand" aria-label="ProfitDesk">
-          <span className="app-brand__mark">PD</span>
+          <span className="app-brand__mark">AC</span>
           <span>
-            <strong>ProfitDesk</strong>
-            <small>Allegro margin operations</small>
+            <strong>Allegro Calc v2</strong>
+            <small>Kalkulator ofert i marż</small>
           </span>
         </Link>
 
