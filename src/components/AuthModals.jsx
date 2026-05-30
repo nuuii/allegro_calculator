@@ -1,26 +1,19 @@
 import React, { useState } from "react";
-import { useAuth } from "./AuthContext";
+import { useAuth } from "../contexts/AuthContext";
 
-export function ProfileAuthScreen({
-  profileAuthMode,
-  setProfileAuthMode,
-  profiles,
-  selectedProfileId,
-  setSelectedProfileId,
-  loginPin,
-  setLoginPin,
-  handleLoginProfile,
-  profileName,
-  setProfileName,
-  profilePin,
-  setProfilePin,
-  profilePinConfirm,
-  setProfilePinConfirm,
-  accessKey,
-  setAccessKey,
-  handleCreateProfile
-}) {
-  // TODO: This component can also be refactored to use useAuth hook internally.
+export function ProfileAuthScreen() {
+  const {
+    profileAuthMode, setProfileAuthMode, profiles,
+    selectedProfileId, setSelectedProfileId,
+    handleLoginProfile, handleCreateProfile
+  } = useAuth();
+
+  const [profileName, setProfileName] = useState("");
+  const [profilePin, setProfilePin] = useState("");
+  const [profilePinConfirm, setProfilePinConfirm] = useState("");
+  const [accessKey, setAccessKey] = useState("");
+  const [loginPin, setLoginPin] = useState("");
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0d11', color: '#e8e4d9', padding: '1.5rem' }}>
       <div style={{ width: 520, maxWidth: '96%', background: '#121218', border: '1px solid #1e1e26', borderRadius: 12, padding: '1.5rem' }}>
@@ -88,7 +81,7 @@ export function ProfileAuthScreen({
               />
 
               <button
-                onClick={handleLoginProfile}
+                onClick={() => handleLoginProfile(selectedProfileId, loginPin)}
                 style={{ width: '100%', background: 'linear-gradient(135deg, #4ecb71, #2a9d47)', border: 'none', borderRadius: 6, color: '#0d0d11', padding: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
               >
                 Zaloguj się
@@ -143,7 +136,12 @@ export function ProfileAuthScreen({
                 Klucz dostępu otrzymasz od administratora. Wpisz go w polu powyżej.
               </div>
               <button
-                onClick={handleCreateProfile}
+                onClick={async () => {
+                  const success = await handleCreateProfile(profileName, profilePin, profilePinConfirm, accessKey);
+                  if (success) {
+                    setProfileName(''); setProfilePin(''); setProfilePinConfirm(''); setAccessKey('');
+                  }
+                }}
                 style={{ width: '100%', background: 'linear-gradient(135deg, #4ecb71, #2a9d47)', border: 'none', borderRadius: 6, color: '#0d0d11', padding: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
               >
                 Utwórz profil

@@ -1,9 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
-import { Routes, Route, Link, useLocation } from "react-router-dom";
+import { useState, useCallback, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from "react-router-dom";
 import { ProfileAuthScreen, ChangePinModal, ProfileManagementModal } from "./components/AuthModals";
 import { useCalculator } from "./hooks/useCalculator";
-import { useApp } from "./contexts/AppContext";
-import { useAuth } from "./contexts/AuthContext";
 import CalculatorPage from "./pages/CalculatorPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 
@@ -17,6 +15,11 @@ const CURRENCIES = [
 
 const VAT_OPTIONS = [5, 8, 23];
 
+const LOCAL_STORAGE_KEYS = {
+  PROFILES: 'calcallegro_profiles',
+  ACTIVE_PROFILE_ID: 'calcallegro_active_profile_id',
+}
+
 function formatPLN(val) {
   if (val === null || val === undefined || isNaN(val)) return "—";
   return val.toFixed(2).replace(".", ",") + " zł";
@@ -29,17 +32,51 @@ function formatPct(val) {
 
 // --- MAIN APP COMPONENT ---
 export default function App() {
-  // State for this component
+  // Global App State
+  const [rates, setRates] = useState({});
+  const [ratesLoading, setRatesLoading] = useState(false);
+  const [ratesError, setRatesError] = useState(null);
+  const [ratesDate, setRatesDate] = useState(null);
   const [savedOffers, setSavedOffers] = useState([]);
   const [eanLoading, setEanLoading] = useState(false);
+  
+  const { pathname } = useLocation();
+  const activeTab = pathname === '/saved' ? 'oferty' : 'kalkulator';
+
+  const [profiles, setProfiles] = useState(() => {
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEYS.PROFILES);
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [activeProfileId, setActiveProfileId] = useState(() => localStorage.getItem(LOCAL_STORAGE_KEYS.ACTIVE_PROFILE_ID) || '');
+  const [profileAuthMode, setProfileAuthMode] = useState(() => {
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEYS.PROFILES);
+    return saved && JSON.parse(saved).length ? 'login' : 'signup';
+  });
+  const [selectedProfileId, setSelectedProfileId] = useState(() => {
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEYS.ACTIVE_PROFILE_ID);
+    if (saved) return saved;
+    const profilesSaved = localStorage.getItem(LOCAL_STORAGE_KEYS.PROFILES);
+    const parsed = profilesSaved ? JSON.parse(profilesSaved) : [];
+    return parsed[0]?.id || '';
+  });
+
+  const [profileName, setProfileName] = useState("");
+  const [profilePin, setProfilePin] = useState("");
+  const [profilePinConfirm, setProfilePinConfirm] = useState("");
+  const [accessKey, setAccessKey] = useState("");
+  const [loginPin, setLoginPin] = useState("");
+  const [profileSwitchPin, setProfileSwitchPin] = useState("");
+  const [isUnlocked, setIsUnlocked] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showChangePinModal, setShowChangePinModal] = useState(false);
+  const [changeCurrentPin, setChangeCurrentPin] = useState("");
+  const [changeNewPin, setChangeNewPin] = useState("");
+  const [changeConfirmPin, setChangeConfirmPin] = useState("");
 
-  // Global State from Contexts
-  const { rates, ratesLoading, edgeConfig, toast, setToast, fetchRatesData } = useApp();
-  const auth = useAuth();
-  const { isUnlocked, activeProfile } = auth;
-  const { pathname } = useLocation();
+  const [edgeConfig, setEdgeConfig] = useState({ smartThreshold: 44.99, isScraperActive: true });
+  const [toast, setToast] = useState({ message: '', type: 'info', visible: false });
+
+  const activeProfile = profiles.find(profile => profile.id === activeProfileId) || null;
 
   // Calculator Logic Hook
   const calculator = useCalculator({ rates, activeProfile });
@@ -47,14 +84,17 @@ export default function App() {
   // Destructure for convenience, especially for finding the cheapest offer
   const { prodEan, setProdEan, setProdName, setOfferPrice } = calculator;
 
+  // Re-assigning to a new variable to avoid conflict in `handleFindCheapestOffer`
+  const calculatorProdEan = calculator.prodEan;
+
   const handleFindCheapestOffer = async () => {
-    if (!prodEan.trim()) {
+    if (!calculatorProdEan.trim()) {
       setToast({ message: 'Wpisz kod EAN, aby wyszukać ofertę', type: 'error', visible: true });
       return;
     }
     setEanLoading(true);
     try {
-      const response = await fetch(`/api/scrape?ean=${encodeURIComponent(prodEan.trim())}`);
+      const response = await fetch(`/api/scrape?ean=${encodeURIComponent(calculatorProdEan.trim())}`);
       const data = await response.json();
       if (data.success) {
         setProdName(data.title);
@@ -69,6 +109,23 @@ export default function App() {
     }
   };
 
+  const saveProfiles = (nextProfiles) => {
+    setProfiles(nextProfiles);
+    localStorage.setItem(LOCAL_STORAGE_KEYS.PROFILES, JSON.stringify(nextProfiles));
+  };
+
+  useEffect(() => {
+    if (activeProfileId) {
+      localStorage.setItem(LOCAL_STORAGE_KEYS.ACTIVE_PROFILE_ID, activeProfileId);
+    }
+  }, [activeProfileId]);
+
+  useEffect(() => {
+    if (!selectedProfileId && profiles.length > 0) {
+      setSelectedProfileId(profiles[0].id);
+    }
+  }, [profiles, selectedProfileId]);
+
   useEffect(() => {
     if (!window.XLSX) {
       const script = document.createElement("script");
@@ -78,11 +135,146 @@ export default function App() {
     }
   }, []);
 
+  const fetchRatesData = useCallback(() => {
+    setRatesLoading(true);
+    setRatesError(null);
+    fetch("/api/scrape?action=rates")
+      .then(r => {
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
+      .then(data => {
+        const converted = {};
+        for (const [cur, rate] of Object.entries(data.rates)) {
+          converted[cur] = 1 / rate;
+        }
+        converted["PLN"] = 1;
+        setRates(converted);
+        setRatesDate(data.date);
+        if (data.config) setEdgeConfig(data.config);
+        setRatesLoading(false);
+      })
+      .catch(() => {
+        setRatesError("Błąd kursów walut (Tryb Offline)");
+        setRates({ PLN: 1, EUR: 4.27, USD: 3.92, GBP: 5.02, CHF: 4.38, CZK: 0.173, RON: 0.86, CNY: 0.541 });
+        setRatesLoading(false);
+      });
+  }, []);
+
   useEffect(() => { fetchRatesData(); }, [fetchRatesData]);
+
+  const hashPin = async (pin) => {
+    const enc = new TextEncoder();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', enc.encode(pin));
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  };
+
+  const handleCreateProfile = async () => {
+    const name = profileName.trim();
+    const key = accessKey.trim();
+    if (!name) {
+      setToast({ message: 'Podaj nazwę profilu', type: 'error', visible: true }); return;
+    }
+    if (!profilePin || profilePin.length < 4) {
+      setToast({ message: 'PIN musi mieć co najmniej 4 cyfry', type: 'error', visible: true }); return;
+    }
+    if (profilePin !== profilePinConfirm) {
+      setToast({ message: 'PINy nie są zgodne', type: 'error', visible: true }); return;
+    }
+    // TODO: Key validation should be done on the server side.
+    const hash = await hashPin(profilePin);
+    const newProfile = { id: Date.now().toString(), name, pinHash: hash, accessKey: key, createdAt: new Date().toISOString() };
+    const nextProfiles = [newProfile, ...profiles];
+    saveProfiles(nextProfiles);
+    setActiveProfileId(newProfile.id);
+    setSelectedProfileId(newProfile.id);
+    setIsUnlocked(true);
+    setProfileAuthMode('login');
+    setProfileName('');
+    setProfilePin('');
+    setProfilePinConfirm('');
+    setAccessKey('');
+    setToast({ message: `Profil ${name} został utworzony`, type: 'success', visible: true });
+  };
+
+  const handleLoginProfile = async () => {
+    const profile = profiles.find(p => p.id === selectedProfileId);
+    if (!profile) {
+      setToast({ message: 'Wybierz profil do zalogowania', type: 'error', visible: true }); return;
+    }
+    if (!loginPin || loginPin.length < 4) {
+      setToast({ message: 'Podaj prawidłowy PIN do profilu', type: 'error', visible: true }); return;
+    }
+    const hash = await hashPin(loginPin);
+    if (hash === profile.pinHash) {
+      setActiveProfileId(profile.id);
+      setIsUnlocked(true);
+      setLoginPin('');
+      setToast({ message: `Zalogowano jako ${profile.name}`, type: 'success', visible: true });
+    } else {
+      alert('Nieprawidłowy PIN');
+    }
+  };
+
+  const handleSwitchProfile = async (profileId, pin) => {
+    const profile = profiles.find(p => p.id === profileId);
+    if (!profile) {
+      setToast({ message: 'Nie znaleziono wybranego profilu', type: 'error', visible: true }); return;
+    }
+    if (!pin || pin.length < 4) {
+      setToast({ message: 'Podaj PIN do profilu, na który chcesz się przełączyć', type: 'error', visible: true }); return;
+    }
+    const hash = await hashPin(pin);
+    if (hash === profile.pinHash) {
+      setActiveProfileId(profile.id);
+      setIsUnlocked(true);
+      setShowProfileModal(false);
+      setProfileSwitchPin('');
+      setToast({ message: `Przełączono na profil ${profile.name}`, type: 'success', visible: true });
+    } else {
+      alert('Nieprawidłowy PIN profilu');
+    }
+  };
 
   const handleOpenChangePin = () => setShowChangePinModal(true);
   const handleCloseChangePin = () => {
     setShowChangePinModal(false);
+    setChangeCurrentPin('');
+    setChangeNewPin('');
+    setChangeConfirmPin('');
+  };
+
+  const handleApplyChangePin = async () => {
+    if (!changeCurrentPin || !changeNewPin) {
+      setToast({ message: 'Wypełnij wszystkie pola PIN', type: 'error', visible: true }); return;
+    }
+    if (changeNewPin.length < 4) {
+      setToast({ message: 'Nowy PIN musi mieć co najmniej 4 cyfry', type: 'error', visible: true }); return;
+    }
+    if (changeNewPin !== changeConfirmPin) {
+      setToast({ message: 'Nowe PINy nie są zgodne', type: 'error', visible: true }); return;
+    }
+    if (!activeProfile) {
+      setToast({ message: 'Brak aktywnego profilu do zmiany PINu', type: 'error', visible: true }); return;
+    }
+
+    // 1. Sprawdzamy czy obecny PIN jest poprawny
+    const currentHash = await hashPin(changeCurrentPin);
+    if (currentHash !== activeProfile.pinHash) { setToast({ message: 'Błędny bieżący PIN', type: 'error', visible: true }); return; }
+
+    // 2. Generujemy nowy hash czekając na wynik (await!)
+    const newHash = await hashPin(changeNewPin);
+
+    // 3. Zapisujemy zaktualizowaną listę profilów
+    const nextProfiles = profiles.map(p => p.id === activeProfile.id ? { ...p, pinHash: newHash } : p);
+    saveProfiles(nextProfiles);
+
+    setShowChangePinModal(false);
+    setChangeCurrentPin('');
+    setChangeNewPin('');
+    setChangeConfirmPin('');
+
+    setToast({ message: 'PIN został pomyślnie zmieniony', type: 'success', visible: true });
   };
 
   const fetchSavedOffers = async () => {
@@ -293,7 +485,7 @@ export default function App() {
   };
 
   return (
-    <>
+    <Router>
       <div style={{ minHeight: "100vh", width: "100%", background: "#0d0d11", fontFamily: "'DM Mono', monospace", color: "#e8e4d9", padding: "1.5rem", display: "flex", flexDirection: "column", alignItems: "center" }}>
         <nav style={{ display: "flex", gap: "2rem", background: "#121218", border: "1px solid #1e1e26", padding: "0.75rem 2rem", borderRadius: "10px", width: "100%", maxWidth: "1140px", marginBottom: "1.5rem", alignItems: "center" }}>
           <strong style={{ color: "#f5a623", fontFamily: "'Syne', sans-serif" }}>Allegro Calc v2</strong>
@@ -314,7 +506,7 @@ export default function App() {
             <Link to="/analityka" style={{ color: "#e8e4d9", textDecoration: "none", fontSize: "0.85rem" }}>📊 Analityka</Link>
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: "0.5rem" }}>
-            <button onClick={auth.logout} title="Zablokuj" style={{ background: '#22222e', border: 'none', color: '#f5a623', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer' }}>🔒</button>
+            <button onClick={() => setIsUnlocked(false)} title="Zablokuj" style={{ background: '#22222e', border: 'none', color: '#f5a623', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer' }}>🔒</button>
             <button onClick={handleOpenChangePin} title="Zmień PIN" style={{ background: '#22222e', border: '1px solid #2d2d3d', color: '#8a8a9e', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer' }}>⚙️</button>
             <button onClick={() => setShowProfileModal(true)} title="Profile" style={{ background: '#22222e', border: '1px solid #2d2d3d', color: '#8a8a9e', borderRadius: 6, padding: '0.35rem 0.6rem', cursor: 'pointer' }}>👤</button>
           </div>
@@ -419,11 +611,28 @@ export default function App() {
         </Routes>
 
         {showChangePinModal && (
-          <ChangePinModal onClose={handleCloseChangePin} />
+          <ChangePinModal
+            changeCurrentPin={changeCurrentPin}
+            setChangeCurrentPin={setChangeCurrentPin}
+            changeNewPin={changeNewPin}
+            setChangeNewPin={setChangeNewPin}
+            changeConfirmPin={changeConfirmPin}
+            setChangeConfirmPin={setChangeConfirmPin}
+            handleApplyChangePin={handleApplyChangePin}
+            handleCloseChangePin={handleCloseChangePin}
+          />
         )}
 
         {showProfileModal && (
-          <ProfileManagementModal onClose={() => setShowProfileModal(false)} />
+          <ProfileManagementModal
+            selectedProfileId={selectedProfileId}
+            setSelectedProfileId={setSelectedProfileId}
+            profiles={profiles}
+            profileSwitchPin={profileSwitchPin}
+            setProfileSwitchPin={setProfileSwitchPin}
+            handleSwitchProfile={handleSwitchProfile}
+            setShowProfileModal={setShowProfileModal}
+          />
         )}
 
         <Toast />
@@ -449,6 +658,6 @@ export default function App() {
           @media (max-width: 850px) { .workspace-grid { grid-template-columns: 1fr; gap: 1rem; } }
         `}</style>
       </div>
-    </>
+    </Router>
   );
 }
