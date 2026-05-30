@@ -195,36 +195,50 @@ export default function CalculatorPage({
             </div>
           </div>
 
+          {/* === SEKCJA OPCJI FINANSOWYCH: PROWIZJA, VAT, DOSTAWA === */}
           <div style={{ 
             display: "grid", 
-            gridTemplateColumns: "1.3fr 0.95fr 0.85fr", 
-            gap: "0.75rem", 
-            alignItems: "start" 
+            gridTemplateColumns: "1.2fr 1fr 0.8fr", 
+            gap: "1rem", 
+            alignItems: "stretch",
+            width: "100%"
           }}>
-            <div>
-              <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.3rem" }}>PROWIZJA %</label>
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+            
+            {/* === KAFELEK: PROWIZJA % === */}
+            <div style={{ 
+              background: "#161622", 
+              border: "1px solid #2d2d3d", 
+              borderRadius: "8px", 
+              padding: "0.75rem", 
+              display: "flex", 
+              flexDirection: "column", 
+              justifyContent: "space-between"
+            }}>
+              <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.6rem", fontWeight: 600 }}>PROWIZJA %</label>
+              
+              {/* Input i przyciski szybkiego wyboru w jednej linii */}
+              <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", marginBottom: "0.6rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.2rem" }}>
                   <input 
                     type="text" 
                     value={allegro} 
                     onChange={e => setAllegro(e.target.value)} 
                     style={{ 
-                      width: "56px", 
+                      width: "50px", 
                       background: "#1e1e28", 
                       border: "1px solid #2d2d3d", 
                       borderRadius: "6px", 
                       color: "#f5a623", 
                       fontSize: "0.95rem", 
-                      padding: "0.5rem", 
+                      padding: "0.4rem", 
                       textAlign: "center", 
                       fontFamily: "inherit",
                       boxSizing: "border-box"
                     }} 
                   />
-                  <span style={{ color: "#f5a623", fontWeight: 700 }}>%</span>
+                  <span style={{ color: "#f5a623", fontWeight: 700, fontSize: "0.85rem" }}>%</span>
                 </div>
-                <div style={{ display: "flex", gap: "0.2rem", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: "0.3rem" }}>
                   {[5, 10, 15].map(v => (
                     <button 
                       key={v} 
@@ -234,9 +248,10 @@ export default function CalculatorPage({
                         color: "#8a8a9e", 
                         border: "none", 
                         borderRadius: "5px", 
-                        fontSize: "0.72rem", 
-                        padding: "0.45rem 0.6rem", 
-                        cursor: "pointer"
+                        fontSize: "0.7rem", 
+                        padding: "0.4rem 0.5rem", 
+                        cursor: "pointer",
+                        fontFamily: "inherit"
                       }}
                     >
                       {v}%
@@ -244,31 +259,40 @@ export default function CalculatorPage({
                   ))}
                 </div>
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center", marginTop: "0.75rem" }}>
-                <button 
-                  type="button" 
-                  onClick={() => setAllegroDiscounted(v => !v)} 
-                  style={{ 
-                    background: allegroDiscounted ? "linear-gradient(135deg, #4ecb71, #2a9d47)" : "#22222e", 
-                    color: allegroDiscounted ? "#0d0d11" : "#8a8a9e", 
-                    border: "none", 
-                    borderRadius: "6px", 
-                    fontSize: "0.75rem", 
-                    padding: "0.55rem 0.85rem", 
-                    cursor: "pointer", 
-                    minWidth: "148px",
-                    fontFamily: "inherit",
-                    fontWeight: 600
-                  }}
-                >
-                  {allegroDiscounted ? "50% RABAT" : "Rabat 50%"}
-                </button>
-              </div>
+
+              {/* Przycisk rabatu - pełna szerokość na dole */}
+              <button 
+                type="button" 
+                onClick={() => setAllegroDiscounted(v => !v)} 
+                style={{ 
+                  width: "100%", 
+                  background: allegroDiscounted ? "linear-gradient(135deg, #4ecb71, #2a9d47)" : "#22222e", 
+                  color: allegroDiscounted ? "#0d0d11" : "#8a8a9e", 
+                  border: "none", 
+                  borderRadius: "6px", 
+                  fontSize: "0.75rem", 
+                  padding: "0.5rem 0", 
+                  cursor: "pointer", 
+                  fontFamily: "inherit",
+                  fontWeight: 600
+                }}
+              >
+                {allegroDiscounted ? "✓ 50% RABAT" : "Rabat 50%"}
+              </button>
             </div>
 
-            <div>
-              <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.3rem" }}>VAT</label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: "0.35rem" }}>
+            {/* === KAFELEK: VAT === */}
+            <div style={{ 
+              background: "#161622", 
+              border: "1px solid #2d2d3d", 
+              borderRadius: "8px", 
+              padding: "0.75rem", 
+              display: "flex", 
+              flexDirection: "column", 
+              justifyContent: "space-between"
+            }}>
+              <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.6rem", fontWeight: 600 }}>VAT</label>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.35rem", flex: 1, alignContent: "center" }}>
                 {vatOptions.map(v => (
                   <button 
                     key={v} 
@@ -278,10 +302,11 @@ export default function CalculatorPage({
                       color: vat === v ? "#0d0d11" : "#8a8a9e", 
                       border: "none", 
                       borderRadius: "5px", 
-                      padding: "0.55rem 0", 
+                      padding: "0.5rem 0", 
                       fontSize: "0.75rem", 
                       fontWeight: 600, 
-                      cursor: "pointer"
+                      cursor: "pointer",
+                      fontFamily: "inherit"
                     }}
                   >
                     {v}%
@@ -290,33 +315,41 @@ export default function CalculatorPage({
               </div>
             </div>
 
-            <div>
-              <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.3rem" }}>DOSTAWA</label>
+            {/* === KAFELEK: DOSTAWA === */}
+            <div style={{ 
+              background: "#161622", 
+              border: "1px solid #2d2d3d", 
+              borderRadius: "8px", 
+              padding: "0.75rem", 
+              display: "flex", 
+              flexDirection: "column", 
+              justifyContent: "space-between"
+            }}>
+              <label style={{ fontSize: "0.68rem", color: "#6a6a82", display: "block", marginBottom: "0.6rem", fontWeight: 600 }}>DOSTAWA</label>
               <button 
                 type="button" 
                 onClick={() => setIncludeDelivery(v => !v)} 
                 style={{ 
                   width: "100%", 
                   display: "flex", 
-                  flexDirection: "column", 
-                  alignItems: "center", 
-                  justifyContent: "center", 
-                  background: "#161622", 
-                  padding: "0.75rem 0.65rem", 
-                  borderRadius: "8px", 
-                  border: "1px solid #2d2d3d", 
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: includeDelivery ? "#1a3a22" : "#1e1e28", 
+                  padding: "0.6rem 0.6rem", 
+                  borderRadius: "6px", 
+                  border: includeDelivery ? "1px solid #4ecb71" : "1px solid #2d2d3d", 
                   cursor: "pointer",
-                  fontFamily: "inherit"
+                  fontFamily: "inherit",
+                  transition: "all 0.2s"
                 }}
               >
-                <span style={{ fontSize: "0.72rem", color: "#6a6a82", lineHeight: 1 }}>DOSTAWA 2%</span>
+                <span style={{ fontSize: "0.7rem", color: "#8a8a9e", fontWeight: 500 }}>2%</span>
                 <span style={{ 
                   fontSize: "0.9rem", 
                   color: includeDelivery ? "#4ecb71" : "#e05555", 
-                  fontWeight: 700, 
-                  marginTop: "0.25rem" 
+                  fontWeight: 700
                 }}>
-                  {includeDelivery ? "TAK" : "NIE"}
+                  {includeDelivery ? "✓ ON" : "✕ OFF"}
                 </span>
               </button>
             </div>

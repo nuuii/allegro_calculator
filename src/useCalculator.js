@@ -140,6 +140,16 @@ export function useCalculator({ rates, activeProfile }) {
     if (editingId === id) handleCancelEdit();
   };
 
+  const handleResetSavedCalculations = () => {
+    setSavedCalculations([]);
+    handleCancelEdit();
+  };
+
+  const handleLoadSavedCalculations = (items) => {
+    if (!Array.isArray(items)) return;
+    setSavedCalculations(items.map(item => ({ ...item })));
+    setEditingId(null);
+  };
   return {
     // State & Setters
     prodName, setProdName, prodEan, setProdEan, offerPrice, setOfferPrice,
@@ -149,6 +159,6 @@ export function useCalculator({ rates, activeProfile }) {
     // Derived values
     result, currentRate,
     // Handlers
-    handleEditItem, handleCancelEdit, handleAddToList, handleRemoveFromList,
+    handleEditItem, handleCancelEdit, handleAddToList, handleRemoveFromList, handleResetSavedCalculations, handleLoadSavedCalculations,
   };
 }

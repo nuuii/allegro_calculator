@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import { ProfileAuthScreen, ChangePinModal, ProfileManagementModal } from "./components/AuthModals";
 import CalculatorPage from "./pages/CalculatorPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
@@ -35,6 +35,7 @@ function AppContent() {
   const location = useLocation();
 
   const calc = useCalculator({ rates, activeProfile });
+  const navigate = useNavigate();
 
   const [savedOffers, setSavedOffers] = useState(() => {
     const saved = localStorage.getItem('calcallegro_saved_offers');
@@ -48,6 +49,22 @@ function AppContent() {
   const activeTab = location.pathname === '/saved' ? 'oferty' : location.pathname === '/ustawienia' ? 'ustawienia' : 'kalkulator';
 
   useEffect(() => {
+    // Pobierz zapisane oferty z API (jeśli dostępne)
+    const fetchSaved = async () => {
+      try {
+        const res = await fetch('/api/calculations');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data)) {
+            setSavedOffers(json.data);
+          }
+        }
+      } catch (err) {
+        console.warn('Nie udało się pobrać zapisanych ofert:', err.message || err);
+      }
+    };
+    fetchSaved();
+
     fetchRatesData();
     if (!window.XLSX) {
       const script = document.createElement("script");
@@ -118,7 +135,7 @@ function AppContent() {
     XLSX.writeFile(workbook, `Kalkulacje_Allegro.xlsx`);
   };
 
-  const handleSaveWholeOffer = () => {
+  const handleSaveWholeOffer = async () => {
     if (calc.savedCalculations.length === 0) {
       setToast({ message: "Lista kalkulacji jest pusta. Dodaj przynajmniej jeden produkt.", type: 'error', visible: true });
       return;
@@ -132,22 +149,63 @@ function AppContent() {
         createdBy: activeProfile?.name || 'Anonim',
         items: calc.savedCalculations
       };
-      setSavedOffers(prev => [newOfferSet, ...prev]);
-      // Czyścimy listę wycen używając hooka
-      calc.handleCancelEdit(); 
-      // Do zresetowania listy podręcznej w hooku po zapisaniu zestawienia
-      window.location.reload(); 
+      
+      try {
+        // Wysyłamy do chmury (przekazujemy oczekiwane pola)
+        const payload = {
+          offerName: newOfferSet.name,
+          items: newOfferSet.items,
+          createdBy: newOfferSet.createdBy,
+        };
+
+        const response = await fetch('/api/calculations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errBody = await response.json().catch(() => ({}));
+          throw new Error(errBody.error || 'Błąd podczas zapisywania do chmury');
+        }
+
+        const resJson = await response.json();
+        const saved = resJson.data || newOfferSet;
+
+        // Dodajemy do lokalnej listy (użyj odpowiedzi z serwera jeśli jest)
+        setSavedOffers(prev => [saved, ...prev]);
+
+        // Czyścimy lokalna liste wycen w kalkulatorze
+        calc.handleResetSavedCalculations();
+
+        setToast({ message: `Zestawienie "${offerName}" zostało pomyślnie zapisane w chmurze!`, type: 'success', visible: true });
+      } catch (error) {
+        console.error('Błąd zapisu:', error);
+        setToast({ message: `Błąd: ${error.message}`, type: 'error', visible: true });
+      }
     }
   };
 
   const handleLoadOfferSet = (offerSet) => {
+    if (!offerSet) return;
+    // Załaduj elementy do hooka kalkulatora i przejdź do ekranu kalkulatora
+    if (calc.handleLoadSavedCalculations) {
+      calc.handleLoadSavedCalculations(offerSet.items || []);
+    }
     setToast({ message: `Wczytano zestawienie "${offerSet.name}".`, type: 'success', visible: true });
+    navigate('/');
   };
 
-  const handleDeleteOfferSet = (offerSetId) => {
-    if (window.confirm("Czy na pewno chcesz usunąć to zestawienie?")) {
+  const handleDeleteOfferSet = async (offerSetId) => {
+    if (!window.confirm("Czy na pewno chcesz usunąć to zestawienie?")) return;
+    try {
+      const res = await fetch(`/api/calculations?id=${encodeURIComponent(offerSetId)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Błąd przy usuwaniu');
       setSavedOffers(prev => prev.filter(set => set.id !== offerSetId));
       setToast({ message: "Zestawienie zostało usunięte.", type: 'info', visible: true });
+    } catch (err) {
+      console.error('Błąd usuwania:', err);
+      setToast({ message: `Błąd: ${err.message}`, type: 'error', visible: true });
     }
   };
 
