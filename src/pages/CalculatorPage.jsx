@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { Field, ResultRow } from "../components/Ui";
 import ResultsTable from "../ResultsTable.jsx";
 
@@ -45,7 +45,12 @@ export default function CalculatorPage({
   vatOptions,
   formatPLN,
   formatPct
-}) {
+}) { 
+  // Modyfikacja funkcji eksportu, aby mogła przyjąć listę jako argument lub użyć domyślnej
+  const exportCurrentList = useCallback(() => {
+    handleExportToExcel(savedCalculations);
+  }, [savedCalculations, handleExportToExcel]);
+
   return (
     <div className="workspace-grid">
       <div style={{ background: "#121218", borderRadius: "12px", padding: "1.25rem", border: "1px solid #1e1e26", display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -270,7 +275,7 @@ export default function CalculatorPage({
 
       <ResultsTable
         savedCalculations={savedCalculations}
-        handleExportToExcel={handleExportToExcel}
+        handleExportToExcel={exportCurrentList}
         onSaveWholeOffer={onSaveWholeOffer}
         handleEditItem={handleEditItem}
         handleRemoveFromList={handleRemoveFromList}

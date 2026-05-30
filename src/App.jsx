@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation } from "react
 import { ProfileAuthScreen, ChangePinModal, ProfileManagementModal } from "./components/AuthModals";
 import CalculatorPage from "./pages/CalculatorPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import SavedOffersPage from "./pages/SavedOffersPage";
 import { useAuth } from './AuthContext.jsx';
 import { useApp } from './AppContext.jsx';
 import './App.css';
@@ -40,7 +41,7 @@ function formatPct(val) {
 }
 
 function AppContent() {
-  const { rates, ratesLoading, edgeConfig, fetchRatesData } = useApp();
+  const { rates, ratesLoading, edgeConfig, fetchRatesData, setToast } = useApp();
   const { activeProfile, logout } = useAuth();
   const location = useLocation();
 
@@ -59,7 +60,10 @@ function AppContent() {
   });
   const [includeDelivery, setIncludeDelivery] = useState(true);
   const [savedCalculations, setSavedCalculations] = useState([]);
-  const [savedOffers, setSavedOffers] = useState([]);
+  const [savedOffers, setSavedOffers] = useState(() => {
+    const saved = localStorage.getItem('calcallegro_saved_offers');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [editingId, setEditingId] = useState(null);
   const [eanLoading, setEanLoading] = useState(false);
 
@@ -82,6 +86,10 @@ function AppContent() {
   useEffect(() => { localStorage.setItem("calcallegro_currency", purchaseCurrency); }, [purchaseCurrency]);
   useEffect(() => { localStorage.setItem("calcallegro_allegro", allegro); }, [allegro]);
   useEffect(() => { localStorage.setItem("calcallegro_vat", vat.toString()); }, [vat]);
+  useEffect(() => {
+    localStorage.setItem('calcallegro_saved_offers', JSON.stringify(savedOffers));
+  }, [savedOffers]);
+
 
   const costInPLN = useCallback(() => {
     const cost = parseFloat(purchaseCost.replace(",", "."));
@@ -221,6 +229,42 @@ function AppContent() {
     XLSX.writeFile(workbook, `Kalkulacje_Allegro.xlsx`);
   };
 
+  const handleSaveWholeOffer = () => {
+    if (savedCalculations.length === 0) {
+      setToast({ message: "Lista kalkulacji jest pusta. Dodaj przynajmniej jeden produkt.", type: 'error', visible: true });
+      return;
+    }
+    const offerName = prompt(`Podaj nazwę dla tego zestawienia ofert:`, `Zestawienie z ${new Date().toLocaleDateString()}`);
+    if (offerName && offerName.trim()) {
+      const newOfferSet = {
+        id: Date.now(),
+        name: offerName.trim(),
+        createdAt: new Date().toISOString(),
+        createdBy: activeProfile?.name || 'Anonim',
+        items: savedCalculations
+      };
+      setSavedOffers(prev => [newOfferSet, ...prev]);
+      setSavedCalculations([]); // Wyczyść listę po zapisaniu
+      setToast({ message: `Zapisano zestawienie "${offerName}"`, type: 'success', visible: true });
+    }
+  };
+
+  const handleLoadOfferSet = (offerSet) => {
+    setSavedCalculations(offerSet.items);
+    setToast({ message: `Wczytano zestawienie "${offerSet.name}" do kalkulatora.`, type: 'success', visible: true });
+  };
+
+  const handleDeleteOfferSet = (offerSetId) => {
+    if (window.confirm("Czy na pewno chcesz usunąć to zestawienie? Tej operacji nie można cofnąć.")) {
+      setSavedOffers(prev => prev.filter(set => set.id !== offerSetId));
+      setToast({ message: "Zestawienie zostało usunięte.", type: 'info', visible: true });
+    }
+  };
+
+  const handleExportOfferSet = (offerSet) => {
+    handleExportToExcel(offerSet.items); // Używamy istniejącej funkcji, przekazując odpowiednie dane
+  };
+
   return (
     <div style={{ minHeight: "100vh", width: "100%", background: "#0d0d11", fontFamily: "'DM Mono', monospace", color: "#e8e4d9", padding: "1.5rem", display: "flex", flexDirection: "column", alignItems: "center" }}>
       
@@ -228,7 +272,7 @@ function AppContent() {
         <strong style={{ color: "#f5a623", fontFamily: "'Syne', sans-serif" }}>Allegro Calc v2</strong>
         <div style={{ display: "flex", gap: "1rem" }}>
           <Link to="/" style={{ color: "#e8e4d9", textDecoration: "none", fontSize: "0.85rem", fontWeight: activeTab === 'kalkulator' ? 700 : 400 }}>
-            🖩 Kalkulator
+            🧮 Kalkulator
           </Link>
           <Link to="/saved" style={{ color: "#e8e4d9", textDecoration: "none", fontSize: "0.85rem", fontWeight: activeTab === 'oferty' ? 700 : 400 }}>
             📂 Zapisane oferty
@@ -262,11 +306,19 @@ function AppContent() {
             isPositive={isPositive} isNegative={isNegative} editingId={editingId} savedCalculations={savedCalculations}
             handleFindCheapestOffer={handleFindCheapestOffer} handleEditItem={handleEditItem} handleCancelEdit={handleCancelEdit}
             handleAddToList={handleAddToList} handleRemoveFromList={handleRemoveFromList} handleExportToExcel={handleExportToExcel}
-            onSaveWholeOffer={() => {}}
+            onSaveWholeOffer={handleSaveWholeOffer}
             currencies={CURRENCIES} vatOptions={VAT_OPTIONS} formatPLN={formatPLN} formatPct={formatPct}
           />
         } />
-        <Route path="/saved" element={<div>Saved Offers Page</div>} />
+        <Route path="/saved" element={
+          <SavedOffersPage
+            savedOffers={savedOffers}
+            onLoad={handleLoadOfferSet}
+            onDelete={handleDeleteOfferSet}
+            onExport={handleExportOfferSet}
+            formatPLN={formatPLN}
+          />
+        } />
         <Route path="/analityka" element={<AnalyticsPage />} />
       </Routes>
 

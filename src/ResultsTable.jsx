@@ -9,6 +9,15 @@ export default function ResultsTable({
   formatPLN,
   formatPct,
 }) {
+  const handleEanClick = (ean) => {
+    if (ean && ean !== '—') {
+      navigator.clipboard.writeText(ean).then(() => {
+        // Opcjonalnie: można dodać powiadomienie o skopiowaniu
+        console.log(`Skopiowano EAN: ${ean}`);
+      });
+    }
+  };
+
   return (
     <div style={{ background: "#121218", borderRadius: "12px", padding: "1.25rem", border: "1px solid #1e1e26", width: "100%", gridColumn: "1 / -1", marginTop: "0.5rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
@@ -38,7 +47,7 @@ export default function ResultsTable({
               {savedCalculations.map(item => (
                 <tr key={item.id}>
                   <td style={{ fontWeight: 500 }}>{item.name}</td>
-                  <td style={{ color: "#6a6a82" }}>{item.ean}</td>
+                  <td style={{ color: "#6a6a82", cursor: 'pointer' }} onClick={() => handleEanClick(item.ean)} title="Kliknij, aby skopiować EAN">{item.ean}</td>
                   <td style={{ color: "#8a8a9e" }}>{item.supplier}</td>
                   <td style={{ color: "#f5a623", fontSize: "0.75rem", fontWeight: 500 }}>👤 {item.createdBy || '—'}</td>
                   <td style={{ color: "#a5a5b5" }}>{item.quantity ? item.quantity : "—"}</td>
