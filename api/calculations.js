@@ -1,4 +1,9 @@
-import { kv } from '@vercel/kv';
+import { createClient } from '@vercel/kv';
+
+const kv = createClient({
+  url: process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN,
+});
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -13,6 +18,13 @@ export default async function handler(req, res) {
     const { method } = req;
     const { id } = req.query;
 
+    if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
+      return res.status(500).json({
+        success: false,
+        error: 'Brak konfiguracji bazy danych KV. Upewnij się, że połączyłeś bazę KV Storage z tym projektem w panelu Vercel.'
+      });
+    }
+
     // GET /api/calculations — pobierz wszystkie wyceny (wspólny worek dla wszystkich)
     if (method === 'GET') {
       const calculations = await kv.get('calculations') || [];
@@ -25,14 +37,14 @@ export default async function handler(req, res) {
       if (!calculation) return res.status(400).json({ success: false, error: 'Brak danych wyceny' });
 
       const calculations = await kv.get('calculations') || [];
-      const newCalc = { 
-        ...calculation, 
-        id: Date.now(), 
-        createdBy: createdBy || 'Anonim', // Zapisujemy nazwę zalogowanego profilu
-        createdAt: new Date().toISOString() 
+      const newCalc = {
+        ...calculation,
+        id: Date.now(),
+        createdBy: createdBy || 'Anonim',
+        createdAt: new Date().toISOString()
       };
       calculations.push(newCalc);
-      await kv.set('calculations', calculations, { ex: 365 * 24 * 60 * 60 }); // TTL 1 rok
+      await kv.set('calculations', calculations);
       
       return res.status(201).json({ success: true, data: newCalc });
     }
@@ -59,14 +71,14 @@ export default async function handler(req, res) {
       
       let calculations = await kv.get('calculations') || [];
       calculations = calculations.filter(c => c.id !== parseInt(id));
-      await kv.set('calculations', calculations, { ex: 365 * 24 * 60 * 60 });
+      await kv.set('calculations', calculations);
       
-      return res.status(200).json({ success: true, message: 'Wycena usunięta' });
+      return res.status(200).json({ success: true, message: 'Wycena została pomyślnie usunięta.' });
     }
 
     return res.status(405).json({ success: false, error: 'Metoda niedozwolona' });
   } catch (error) {
-    console.error('Błąd obsługi wycen:', error);
-    return res.status(500).json({ success: false, error: error.message });
+    console.error('Błąd operacji na bazie Vercel KV:', error);
+    return res.status(500).json({ success: false, error: 'Błąd bazy danych: ' + error.message });
   }
 }
